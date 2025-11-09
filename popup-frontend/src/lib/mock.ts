@@ -1,8 +1,24 @@
 import type { PopupItem } from './types'
 
 export const mockPersonalized: PopupItem[] = [
-  { id:'p1', title:'LE LABO 성수 팝업', brand:'LE LABO', startDate:'2025-11-05', endDate:'2025-11-20', region:'서울/성동구', lat:37.544, lon:127.056, address:'서울 성동구 성수동', category:'향수', thumbnail:'https://picsum.photos/seed/leb/600/400' },
-  { id:'p2', title:'무지 팝업 키친', brand:'MUJI', startDate:'2025-11-02', endDate:'2025-11-18', region:'서울/강남구', lat:37.497, lon:127.028, address:'서울 강남구', category:'리빙', thumbnail:'https://picsum.photos/seed/muji/600/400' },
+  {
+    id: 'p1',
+    title: 'LE LABO 성수 팝업',
+    brand: 'LE LABO',
+    startDate: '2025-11-05',
+    endDate: '2025-11-20',
+    region: '서울/성동구',
+    thumbnail: '/images/popup-fashion.jpg',
+  },
+  {
+    id: 'p2',
+    title: '무지 팝업 키친',
+    brand: 'MUJI',
+    startDate: '2025-11-02',
+    endDate: '2025-11-18',
+    region: '서울/강남구',
+    thumbnail: '/images/popup-living.jpg',
+  },
 ]
 
 export const mockMonthly: PopupItem[] = [

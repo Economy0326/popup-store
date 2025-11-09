@@ -4,12 +4,20 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import RootLayout from './routes/RootLayout'
 import HomePage from './routes/HomePage'
+import FavoritesPage from './routes/FavoritesPage'
+import RegisterPage from './routes/RegisterPage'
+import PopupDetailPage from './routes/PopupDetailPage'
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <RootLayout />,
-    children: [{ index: true, element: <HomePage /> }],
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: 'favorites', element: <FavoritesPage /> },
+      { path: 'register', element: <RegisterPage /> },
+      { path: 'popup/:id', element: <PopupDetailPage /> },
+    ],
   },
 ])
 
