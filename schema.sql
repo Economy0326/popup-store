@@ -83,3 +83,31 @@ INSERT IGNORE INTO categories (name) VALUES
 ('culture'),
 ('sports'),
 ('etc');
+
+-- 트리거들
+DELIMITER $$
+CREATE TRIGGER favorites_after_insert
+AFTER INSERT ON favorites
+FOR EACH ROW
+BEGIN
+  UPDATE popup_stores
+  SET favorite_count = (
+    SELECT COUNT(*) FROM favorites WHERE popup_id = NEW.popup_id
+  )
+  WHERE id = NEW.popup_id;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER favorites_after_delete
+AFTER DELETE ON favorites
+FOR EACH ROW
+BEGIN
+  UPDATE popup_stores
+  SET favorite_count = (
+    SELECT COUNT(*) FROM favorites WHERE popup_id = OLD.popup_id
+  )
+  WHERE id = OLD.popup_id;
+END$$
+DELIMITER ;
+

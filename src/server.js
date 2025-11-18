@@ -4,8 +4,11 @@ const mysql = require('mysql2');
 const authRouter = require('./routes/auth');
 const popupsRouter = require('./routes/popups');
 const authMiddleware = require('./middleware/auth');
+const usersRouter = require('./routes/users');
+const favoritesRouter = require('./routes/favorites');
 
 const app = express();
+app.use(express.json());
 const port = process.env.PORT || 3000;
 
 const db = mysql.createConnection({
@@ -26,6 +29,8 @@ db.connect((err) => {
 app.use(authMiddleware);
 app.use('/auth', authRouter);
 app.use('/api/popups', popupsRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/favorites', favoritesRouter);
 
 app.get('/', (req, res) => {
   res.send('Popup Store Backend is running!');

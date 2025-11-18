@@ -3,41 +3,7 @@ const router = express.Router();
 
 const db = require('../db');
 
-// PopupItem 변환 함수 (공통)
-async function toPopupItem(row, userId = null) {
-  const [imgRows] = await db.promise().query('SELECT image_url FROM popup_images WHERE popup_id = ?', [row.id]);
-  const [catRows] = await db.promise().query(
-    'SELECT c.name FROM categories c JOIN popup_categories pc ON c.id = pc.category_id WHERE pc.popup_id = ?', [row.id]
-  );
-  let isFavorited = false;
-  if (userId) {
-    const [favRows] = await db.promise().query('SELECT 1 FROM favorites WHERE user_id = ? AND popup_id = ?', [userId, row.id]);
-    isFavorited = favRows.length > 0;
-  }
-  let regionLabel = null;
-  if (row.address) {
-    const parts = row.address.split(' ');
-    regionLabel = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : parts[0];
-  }
-  return {
-    id: row.id,
-    name: row.name,
-    address: row.address,
-    lat: row.mapy,
-    lon: row.mapx,
-    startDate: row.start_date,
-    endDate: row.end_date,
-    description: row.description,
-    webSiteLink: row.site_link,
-    weeklyViewCount: row.weekly_view_count,
-    favoriteCount: row.favorite_count,
-    images: imgRows.map(img => img.image_url),
-    updated: row.updated_at,
-    category: catRows.map(cat => cat.name).join(','),
-    regionLabel,
-    isFavorited
-  };
-}
+const { toPopupItem } = require('../utils/popupItem');
 
 // 한글 카테고리 → 영어 카테고리 변환 함수
 function toEnglishCategory(kor) {
@@ -167,6 +133,76 @@ router.get('/', async (req, res) => {
     const userId = req.user?.id || null;
     const items = await Promise.all(rows.map(row => toPopupItem(row, userId)));
     res.json({ items, page: parseInt(page), pageSize: parseInt(pageSize), total });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 팝업 상세 조회 API
+router.get('/:id', async (req, res) => {
+  try {
+    const popupId = req.params.id;
+    const [rows] = await db.promise().query('SELECT * FROM popup_stores WHERE id = ?', [popupId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Popup not found' });
+    }
+    const userId = req.user?.id || null;
+    const item = await toPopupItem(rows[0], userId);
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// 가까운 팝업 API (주변 지역 기준)
+router.get('/:id/nearby', async (req, res) => {
+  try {
+    const popupId = req.params.id;
+    // 기준 팝업의 주소 추출
+    const [rows] = await db.promise().query('SELECT address FROM popup_stores WHERE id = ?', [popupId]);
+    if (rows.length === 0 || !rows[0].address) {
+      return res.json({ items: [] }); // 기준 팝업 없거나 주소 없으면 빈 배열
+    }
+    // region_label: 주소 앞 2단어
+    const parts = rows[0].address.split(' ');
+    const regionLabel = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : parts[0];
+    // 같은 region_label, 자기 자신 제외, 최신순 12개
+    const [nearbyRows] = await db.promise().query(
+      `SELECT * FROM popup_stores WHERE id != ? AND (address LIKE ? OR CONCAT(SUBSTRING_INDEX(address, ' ', 2)) = ?) ORDER BY updated_at DESC LIMIT 12`,
+      [popupId, `%${regionLabel}%`, regionLabel]
+    );
+    const userId = req.user?.id || null;
+    const items = await Promise.all(nearbyRows.map(row => toPopupItem(row, userId)));
+    res.json({ items });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// 비슷한 팝업 API
+router.get('/:id/similar', async (req, res) => {
+  try {
+    const popupId = req.params.id;
+    // 기준 팝업의 카테고리 추출
+    const [catRows] = await db.promise().query(
+      'SELECT c.name FROM categories c JOIN popup_categories pc ON c.id = pc.category_id WHERE pc.popup_id = ?', [popupId]
+    );
+    if (catRows.length === 0) {
+      return res.json([]); // 카테고리 없으면 비슷한 팝업 없음
+    }
+    // 모든 카테고리 기준으로 비슷한 팝업 추천
+    const categories = catRows.map(row => row.name);
+    // IN 조건으로 여러 카테고리, 현재 팝업 제외, 최대 12개
+    const placeholders = categories.map(() => '?').join(',');
+    const query = `SELECT ps.* FROM popup_stores ps
+      JOIN popup_categories pc ON ps.id = pc.popup_id
+      JOIN categories c ON pc.category_id = c.id
+      WHERE c.name IN (${placeholders}) AND ps.id != ?
+      GROUP BY ps.id
+      ORDER BY ps.updated_at DESC
+      LIMIT 12`;
+    const [rows] = await db.promise().query(query, [...categories, popupId]);
+    const userId = req.user?.id || null;
+    const items = await Promise.all(rows.map(row => toPopupItem(row, userId)));
+    res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
