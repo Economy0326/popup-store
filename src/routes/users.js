@@ -3,7 +3,6 @@ const router = express.Router();
 
 const db = require('../db');
 const { toPopupItem } = require('../utils/popupItem');
-console.log('toPopupItem import:', toPopupItem);
 
 // 내 즐겨찾기 목록 API
 router.get('/me/favorites', async (req, res) => {
@@ -24,7 +23,6 @@ router.get('/me/favorites', async (req, res) => {
       `SELECT * FROM popup_stores WHERE id IN (${placeholders}) ORDER BY updated_at DESC`, popupIds
     );
 
-    console.log('popupRows:', popupRows);
     const items = await Promise.all(popupRows.map(row => toPopupItem(row, userId)));
     res.json({ items });
   } catch (err) {

@@ -11,8 +11,8 @@ async function findUserByUserId(userid) {
 async function createUser(user) {
   return new Promise((resolve, reject) => {
     db.query(
-      'INSERT INTO users (userid, email, name, nickname) VALUES (?, ?, ?, ?)',
-      [user.userid, user.email, user.name, user.nickname],
+      'INSERT INTO users (userid, profile_image, name, nickname) VALUES (?, ?, ?, ?)',
+      [user.userid, user.profile_image, user.name, user.nickname],
       (err, results) => {
         if (err) return reject(err);
         resolve(results.insertId);

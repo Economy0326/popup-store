@@ -41,7 +41,7 @@ router.get('/naver/callback', async (req, res) => {
       // 신규 유저면 DB에 저장
       await createUser({
         userid: profile.id,
-        email: profile.email,
+        profile_image: profile.profile_image,
         name: profile.name,
         nickname: profile.nickname
       });
@@ -51,7 +51,7 @@ router.get('/naver/callback', async (req, res) => {
     const payload = {
       id: user.id, // PK
       userid: user.userid, // 네이버 고유값
-      email: user.email,
+      profile_image: user.profile_image,
       name: user.name,
       nickname: user.nickname
     };
