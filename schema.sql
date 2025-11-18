@@ -111,3 +111,11 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- 스케줄러 이벤트
+SET GLOBAL event_scheduler = ON;
+
+CREATE EVENT IF NOT EXISTS reset_weekly_view_count
+ON SCHEDULE EVERY 1 WEEK
+STARTS CURRENT_TIMESTAMP
+DO
+  UPDATE popup_stores SET weekly_view_count = 0;

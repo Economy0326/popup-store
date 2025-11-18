@@ -142,6 +142,8 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const popupId = req.params.id;
+    // 조회수 증가
+    await db.promise().query('UPDATE popup_stores SET weekly_view_count = weekly_view_count + 1 WHERE id = ?', [popupId]);
     const [rows] = await db.promise().query('SELECT * FROM popup_stores WHERE id = ?', [popupId]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Popup not found' });
