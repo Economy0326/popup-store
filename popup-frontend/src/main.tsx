@@ -4,25 +4,31 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import RootLayout from './routes/RootLayout'
 import HomePage from './routes/HomePage'
+import PopupDetailPage from './routes/PopupDetailPage'
 import FavoritesPage from './routes/FavoritesPage'
 import RegisterPage from './routes/RegisterPage'
-import PopupDetailPage from './routes/PopupDetailPage'
+import ReportsAdminPage from './routes/ReportsAdminPage'
+import { AuthProvider } from './hooks/useAuth'
+
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <RootLayout />,
     children: [
+      { path: 'popup/:id', element: <PopupDetailPage /> },
       { index: true, element: <HomePage /> },
       { path: 'favorites', element: <FavoritesPage /> },
-      { path: 'register', element: <RegisterPage /> },
-      { path: 'popup/:id', element: <PopupDetailPage /> },
+      { path: 'register', element: <RegisterPage /> },       
+      { path: 'reports/admin', element: <ReportsAdminPage /> },
     ],
   },
 ])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </React.StrictMode>
 )

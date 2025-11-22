@@ -2,10 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; }
+html, #root { height: 100%; }
+body { 
+  height: 100%;
+  overflow-x: hidden;
+}
 
 @layer base {
   body { @apply bg-bg text-text; }
+}
+
+/* 네이버 지도 클릭 시 생기는 포커스/테두리 제거 */
+.naver-map-wrapper:focus,
+.naver-map-wrapper *:focus {
+  outline: none !important;
+}
+
+/* 네이버 지도 내부에서 tabindex 가진 div에 생기는 검정 테두리 제거 */
+.naver-map-wrapper div[tabindex],
+.naver-map-wrapper div[tabindex]:focus {
+  outline: none !important;
+  border: none !important;
 }
 
 *::-webkit-scrollbar { height: 10px; width: 10px; }

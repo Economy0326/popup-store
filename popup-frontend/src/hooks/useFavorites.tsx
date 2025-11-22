@@ -5,57 +5,62 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import {
+  fetchMyFavorites,
+  addFavorite,
+  removeFavorite,
+} from '../api/favorites'
+
+// string이든 number든 둘 다 받을 수 있게
+export type IdLike = string | number
 
 type FavoritesContextValue = {
-  favorites: string[]
-  isFavorite: (id: string) => boolean
-  toggleFavorite: (id: string) => void
+  loading: boolean
+  favoriteIds: number[]
+  isFavorite: (id: IdLike) => boolean
+  toggleFavorite: (id: IdLike) => Promise<void>
 }
 
-const FavoritesContext = createContext<FavoritesContextValue | null>(null)
+const FavoritesContext = createContext<FavoritesContextValue | undefined>(
+  undefined
+)
 
-const STORAGE_KEY = 'popupst:favorites'
+// 공통 변환 함수: string이면 Number(), 이미 number면 그대로
+const toNumber = (id: IdLike): number =>
+  typeof id === 'string' ? Number(id) : id
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
-  const [favorites, setFavorites] = useState<string[]>([])
+  const [favoriteIds, setFavoriteIds] = useState<number[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // 초기 로드
+  // 초기 로딩
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) {
-          setFavorites(parsed)
-        }
-      }
-    } catch (e) {
-      console.error('load favorites failed', e)
-    }
+    fetchMyFavorites()
+      .then((res) => {
+        // API에서 id가 string이든 number든 모두 number로 변환
+        const ids = res.items?.map((i) => Number(i.id)) ?? []
+        setFavoriteIds(ids)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
-  // 변경 시 저장
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites))
-    } catch (e) {
-      console.error('save favorites failed', e)
+  const isFavorite = (id: IdLike) => favoriteIds.includes(toNumber(id))
+
+  const toggleFavorite = async (id: IdLike) => {
+    const numId = toNumber(id)
+
+    if (favoriteIds.includes(numId)) {
+      await removeFavorite(numId)
+      setFavoriteIds((prev) => prev.filter((x) => x !== numId))
+    } else {
+      await addFavorite(numId)
+      setFavoriteIds((prev) => [...prev, numId])
     }
-  }, [favorites])
-
-  const isFavorite = (id: string) => favorites.includes(id)
-
-  const toggleFavorite = (id: string) => {
-    setFavorites(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id],
-    )
   }
 
   return (
     <FavoritesContext.Provider
-      value={{ favorites, isFavorite, toggleFavorite }}
+      value={{ loading, favoriteIds, isFavorite, toggleFavorite }}
     >
       {children}
     </FavoritesContext.Provider>
@@ -65,7 +70,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 export function useFavorites() {
   const ctx = useContext(FavoritesContext)
   if (!ctx) {
-    throw new Error('useFavorites must be used within FavoritesProvider')
+    throw new Error('useFavorites는 FavoritesProvider 안에서만 사용할 수 있습니다.')
   }
   return ctx
 }
