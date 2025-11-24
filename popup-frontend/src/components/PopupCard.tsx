@@ -57,8 +57,7 @@ export default function PopupCard({ item }: { item: PopupItem }) {
               {item.title ?? item.name ?? '제목 미정'}
             </h3>
             <p className="text-xs text-textMuted mb-2">
-              {item.region ?? item.regionLabel ?? '지역 미정'}
-              {item.brand ? ` · ${item.brand}` : ''}
+              {item.region ?? '지역 미정'}
             </p>
 
             <div className="text-[11px] text-textMuted">

@@ -130,7 +130,6 @@ export default function PopupDetailPage() {
               {popup.title}
             </h1>
             <p className="text-sm text-textMuted mt-1">
-              {popup.brand && `${popup.brand} · `}
               {popup.region ?? popup.address ?? '지역 정보 준비 중'}
             </p>
           </div>

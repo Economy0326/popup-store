@@ -51,18 +51,22 @@ export default function FavoritesPage() {
   }, [])
 
   // 여기서 it.id를 문자열로 변환해서 비교
+  // all이 배열이 아닐 수 있으므로 안전하게 처리
   const favoriteItems = useMemo(
-    () => all.filter((it) => favorites.includes(String(it.id))),
+    () => {
+      const srcAll = Array.isArray(all) ? all : []
+      return srcAll.filter((it) => favorites.includes(String(it.id)))
+    },
     [all, favorites]
   )
 
-  const favoriteWithCoords = useMemo(
-    () =>
-      favoriteItems.filter(
-        (it) => typeof it.lat === 'number' && typeof it.lon === 'number'
-      ),
-    [favoriteItems]
-  )
+  // favoriteItems가 배열이 아닐 가능성에 대비
+  const favoriteWithCoords = useMemo(() => {
+    const src = Array.isArray(favoriteItems) ? favoriteItems : []
+    return src.filter(
+      (it) => typeof it.lat === 'number' && typeof it.lon === 'number'
+    )
+  }, [favoriteItems])
 
   if (loading) {
     return (

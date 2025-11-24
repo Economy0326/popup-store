@@ -39,10 +39,15 @@ export default function HomePage() {
     setFilters(next)
   }
 
-  const applyFilters = (items: PopupItem[]): PopupItem[] => {
-    if (!filters) return items
+  // 필터 적용 함수: items가 배열이 아닐 경우 안전하게 처리합니다.
+  // (서버 응답이 예상과 달라 객체가 들어오는 경우에 대비)
+  const applyFilters = (items: PopupItem[] | any): PopupItem[] => {
+    if (!filters) return Array.isArray(items) ? items : []
 
-    return items.filter((item) => {
+    // items가 배열이 아닌 경우 빈 배열로 처리하여 .filter 호출 에러를 방지
+    const src: PopupItem[] = Array.isArray(items) ? items : []
+
+    return src.filter((item) => {
       const addressSource = item.address ?? item.region ?? ''
 
       // Location: "전체"가 아니면 address/region에 포함되는지
@@ -72,7 +77,10 @@ export default function HomePage() {
   const latest = useMemo(() => {
     const now = new Date()
 
-    const withinRange = all.filter((item) => {
+    // all이 배열인지 확인하고 아니면 빈 배열로 대체
+    const srcAll = Array.isArray(all) ? all : []
+
+    const withinRange = srcAll.filter((item) => {
       if (!item.updated) return false
       const updated = new Date(item.updated)
       if (Number.isNaN(updated.getTime())) return false
@@ -96,13 +104,17 @@ export default function HomePage() {
 
   // 인기: 나중에 favorite_count / weekly_view_count 기반으로 API 정렬 예정
   const popular = useMemo(() => {
-    const sorted = [...all] // TODO: 백엔드에서 인기순 정렬된 리스트를 주면 그대로 사용
+    // 인기 목록도 all이 배열인지 확인
+    const srcAllForPopular = Array.isArray(all) ? all : []
+    const sorted = [...srcAllForPopular] // TODO: 백엔드에서 인기순 정렬된 리스트를 주면 그대로 사용
     return applyFilters(sorted)
   }, [all, filters])
 
   // 선택한 월의 팝업: startDate / endDate와 "월이 겹치는" 아이템만
   const monthly = useMemo(() => {
-    const filtered = all.filter((item) => {
+    const srcAllForMonthly = Array.isArray(all) ? all : []
+
+    const filtered = srcAllForMonthly.filter((item) => {
       if (!item.startDate && !item.endDate) return false
 
       const selected = selectedMonth
