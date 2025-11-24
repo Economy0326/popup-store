@@ -23,8 +23,9 @@ export default function HomePage() {
         if (!res.ok) {
           throw new Error('팝업 목록을 불러오지 못했습니다.')
         }
-        const data: PopupItem[] = await res.json()
-        setAll(data)
+        const data = await res.json()
+        setAll(data.items)
+        
       } catch (e: any) {
         setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
       } finally {

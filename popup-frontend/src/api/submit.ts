@@ -1,5 +1,3 @@
-import { api } from './client'
-
 export function submitPopup(data: {
   name: string
   address: string
