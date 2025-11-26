@@ -1,9 +1,11 @@
 // src/components/PopupCard.tsx
 import { Link } from 'react-router-dom'
 import { useFavorites } from '../hooks/useFavorites'
+import { useAuth } from '../hooks/useAuth'
 import type { PopupItem } from '../types/popup'
 
 export default function PopupCard({ item }: { item: PopupItem }) {
+  const { user } = useAuth()
   const { isFavorite, toggleFavorite } = useFavorites()
   const favored = isFavorite(item.id)
 
@@ -43,21 +45,23 @@ export default function PopupCard({ item }: { item: PopupItem }) {
             )}
           </div>
 
-          {/* 찜 버튼 */}
-          <button
-            onClick={handleFav}
-            className="absolute top-2 right-2 z-20 bg-white/80 backdrop-blur-sm rounded-full px-2 py-1 text-md text-primary shadow-sm hover:bg-white transition
-                      focus:outline-none focus-visible:outline-none focus:ring-0"
-          >
-            {favored ? '♥' : '♡'}
-          </button>
+           {/* 로그인한 사용자에게만 하트 보여주기 */}
+          {user && (
+            <button
+              onClick={handleFav}
+              className="absolute top-2 right-2 z-20 bg-white/80 backdrop-blur-sm rounded-full px-2 py-1 text-md text-primary shadow-sm hover:bg-white transition
+                        focus:outline-none focus-visible:outline-none focus:ring-0"
+            >
+              {favored ? '♥' : '♡'}
+            </button>
+          )}
 
           <div className="p-4">
             <h3 className="font-semibold text-slate-900 line-clamp-1 mb-1">
               {item.title ?? item.name ?? '제목 미정'}
             </h3>
             <p className="text-xs text-textMuted mb-2">
-              {item.region ?? '지역 미정'}
+              {item.regionLabel ?? '지역 미정'}
             </p>
 
             <div className="text-[11px] text-textMuted">

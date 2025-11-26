@@ -76,7 +76,7 @@ export default function FavoritesMap({ items }: Props) {
       contentEl.style.cursor = 'pointer'
       contentEl.innerHTML = `
         <b>${p.title}</b><br/>
-        <span>${p.region ?? ''}</span>
+        <span>${p.regionLabel ?? ''}</span>
       `
 
       // DOM 요소에 직접 클릭 이벤트 연결 (네이버 DOM 이벤트 유틸 사용)

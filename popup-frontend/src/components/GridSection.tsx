@@ -6,7 +6,7 @@ type GridSectionProps = {
   title: string
   items: PopupItem[]
   variant?: 'carousel' | 'grid'
-  pageSize?: number // ex) 12 넘기면 "더 보기" 동작
+  pageSize?: number
   rightSlot?: React.ReactNode
 }
 
@@ -20,20 +20,17 @@ export default function GridSection({
   const wrapRef = useRef<HTMLDivElement>(null)
   const [showArrows, setShowArrows] = useState(false)
 
-  // ▶ "더 보기"용 visibleCount
   const [visibleCount, setVisibleCount] = useState(() =>
     pageSize ? Math.min(pageSize, items.length) : items.length
   )
 
   useEffect(() => {
-    // items / pageSize 바뀌면 visibleCount 리셋
     setVisibleCount(pageSize ? Math.min(pageSize, items.length) : items.length)
   }, [items, pageSize])
 
   const visibleItems = items.slice(0, visibleCount)
   const canLoadMore = visibleCount < items.length
 
-  // ▶ 캐러셀에서만 좌우 화살표 필요
   useEffect(() => {
     if (variant !== 'carousel') {
       setShowArrows(false)
@@ -67,7 +64,7 @@ export default function GridSection({
   }
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-6">
+    <section className="mx-auto max-w-7xl px-6 sm:px-8 py-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-lg font-semibold whitespace-nowrap">
           {title}
@@ -89,7 +86,6 @@ export default function GridSection({
       </div>
 
       {variant === 'carousel' ? (
-        // 홈에서 쓰는 가로 캐러셀
         <div
           ref={wrapRef}
           className="relative -mx-2 px-2 overflow-x-auto scrollbar-thin scrollbar-thumb-rounded"
@@ -107,7 +103,6 @@ export default function GridSection({
           </div>
         </div>
       ) : (
-        // 즐겨찾기 페이지용 세로 그리드
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {visibleItems.map((it) => (
             <PopupCard key={it.id} item={it} />
@@ -115,7 +110,6 @@ export default function GridSection({
         </div>
       )}
 
-      {/* 모바일 캐러셀 화살표 */}
       {variant === 'carousel' && showArrows && (
         <div className="mt-3 flex sm:hidden justify-center gap-3">
           <IconButton label="이전" onClick={() => scrollByViewport('left')}>
@@ -127,7 +121,6 @@ export default function GridSection({
         </div>
       )}
 
-      {/* "더보기" 버튼 (pageSize가 있을 때만) */}
       {pageSize && canLoadMore && (
         <div className="mt-6 flex justify-center">
           <button

@@ -5,6 +5,7 @@ import NaverMap from '../components/NaverMap'
 import GridSection from '../components/GridSection'
 import { getCategoryLabel } from '../lib/categoryMap'
 import { useFavorites } from '../hooks/useFavorites'
+import { useAuth } from '../hooks/useAuth'
 import type { PopupItem } from '../types/popup'
 import {
   fetchPopupDetail,
@@ -16,6 +17,7 @@ export default function PopupDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isFavorite, toggleFavorite } = useFavorites()
+  const { user } = useAuth()
 
   const [popup, setPopup] = useState<PopupItem | null>(null)
   const [similarByCategory, setSimilarByCategory] = useState<PopupItem[]>([])
@@ -130,23 +132,25 @@ export default function PopupDetailPage() {
               {popup.title}
             </h1>
             <p className="text-sm text-textMuted mt-1">
-              {popup.region ?? popup.address ?? '지역 정보 준비 중'}
+              {popup.regionLabel ?? popup.address ?? '지역 정보 준비 중'}
             </p>
           </div>
 
-          {/* ♥ 즐겨찾기 버튼 */}
-          <button
-            onClick={() => toggleFavorite(Number(popup.id))}
-            className={`mt-1 px-3 py-1.5 rounded-full text-xs font-medium border flex items-center gap-1 transition
-              ${
-                favored
-                  ? 'bg-red-500 text-white border-red-500'
-                  : 'bg-white text-slate-700 border-line hover:bg-slate-50'
-              }`}
-          >
-            <span>{favored ? '♥' : '♡'}</span>
-            <span>{favored ? '즐겨찾기됨' : '즐겨찾기'}</span>
-          </button>
+          {/* ♥ 즐겨찾기 버튼 + 로그인 때만 뜸 */}
+          {user && (
+            <button
+              onClick={() => toggleFavorite(Number(popup.id))}
+              className={`mt-1 px-3 py-1.5 rounded-full text-xs font-medium border flex items-center gap-1 transition
+                ${
+                  favored
+                    ? 'bg-red-500 text-white border-red-500'
+                    : 'bg-white text-slate-700 border-line hover:bg-slate-50'
+                }`}
+            >
+              <span>{favored ? '♥' : '♡'}</span>
+              <span>{favored ? '즐겨찾기됨' : '즐겨찾기'}</span>
+            </button>
+          )}
         </div>
 
         {/* 태그 / 기간 / 카테고리 / 지역 */}
@@ -163,9 +167,9 @@ export default function PopupDetailPage() {
             </span>
           )}
 
-          {popup.region && (
+          {popup.regionLabel && (
             <span className="px-3 py-1 rounded-full bg-white border border-line">
-              {popup.region}
+              {popup.regionLabel}
             </span>
           )}
         </div>

@@ -9,7 +9,7 @@ import FavoritesPage from './routes/FavoritesPage'
 import RegisterPage from './routes/RegisterPage'
 import ReportsAdminPage from './routes/ReportsAdminPage'
 import { AuthProvider } from './hooks/useAuth'
-
+import MyReportsPage from './routes/MyReportsPage'
 
 const router = createBrowserRouter([
   {
@@ -21,6 +21,7 @@ const router = createBrowserRouter([
       { path: 'favorites', element: <FavoritesPage /> },
       { path: 'register', element: <RegisterPage /> },       
       { path: 'reports/admin', element: <ReportsAdminPage /> },
+      { path: 'my/reports', element: <MyReportsPage /> },
     ],
   },
 ])

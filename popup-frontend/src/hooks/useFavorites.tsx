@@ -10,6 +10,7 @@ import {
   addFavorite,
   removeFavorite,
 } from '../api/favorites'
+import { useAuth } from './useAuth'
 
 // string이든 number든 둘 다 받을 수 있게
 export type IdLike = string | number
@@ -33,21 +34,39 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favoriteIds, setFavoriteIds] = useState<number[]>([])
   const [loading, setLoading] = useState(true)
 
-  // 초기 로딩
+  // 로그인 상태
+  const { user, loading: authLoading, login } = useAuth()
+
+  // 초기 로딩: 로그인된 경우에만 즐겨찾기 요청
   useEffect(() => {
+    if (authLoading) return
+
+    // 비로그인 → 즐겨찾기 비워두고 끝
+    if (!user) {
+      setFavoriteIds([])
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
     fetchMyFavorites()
       .then((res) => {
-        // API에서 id가 string이든 number든 모두 number로 변환
         const ids = res.items?.map((i) => Number(i.id)) ?? []
         setFavoriteIds(ids)
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [user, authLoading])
 
   const isFavorite = (id: IdLike) => favoriteIds.includes(toNumber(id))
 
   const toggleFavorite = async (id: IdLike) => {
     const numId = toNumber(id)
+
+    // 비로그인 → 네이버 로그인 바로 시도
+    if (!user) {
+      login() // AuthProvider 안의 startNaverLogin 실행
+      return
+    }
 
     if (favoriteIds.includes(numId)) {
       await removeFavorite(numId)

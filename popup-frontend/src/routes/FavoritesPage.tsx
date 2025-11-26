@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import GridSection from '../components/GridSection'
 import FavoritesMap from '../components/FavoritesMap'
 import type { PopupItem } from '../types/popup'
+import { useAuth } from '../hooks/useAuth'
 
 type MeResponse = {
   id: string
@@ -11,26 +12,45 @@ type MeResponse = {
 }
 
 export default function FavoritesPage() {
+  const { user, loading: authLoading, login } = useAuth()
+
   const [all, setAll] = useState<PopupItem[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+ // 비로그인일 때 바로 네이버 로그인으로
   useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      login() // startNaverLogin 호출됨
+    }
+  }, [authLoading, user, login])
+
+  // 로그인된 경우에만 즐겨찾기 데이터 로딩
+  useEffect(() => {
+    if (authLoading || !user) return
+
     const fetchData = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        // 1) 팝업 전체 목록
+        // 팝업 전체 목록
         const popupsRes = await fetch('/api/popups')
         if (!popupsRes.ok) {
           throw new Error('팝업 목록을 불러오지 못했습니다.')
         }
-        const popups: PopupItem[] = await popupsRes.json()
+        const popupsJson = await popupsRes.json()
+        // HomePage에서는 { items: PopupItem[] } 형식이었지만
+        // 여기선 이미 전체 응답을 PopupItem[]로 가정하고 있었으니
+        // 실제 백엔드 응답에 맞게 아래 한 줄은 필요에 따라 조정
+        const popups: PopupItem[] = Array.isArray(popupsJson.items)
+          ? popupsJson.items
+          : popupsJson
         setAll(popups)
 
-        // 2) 내 정보 (즐겨찾기)
+        // 내 정보 (즐겨찾기)
         const meRes = await fetch('/api/users/me', {
           credentials: 'include',
         })
@@ -48,7 +68,7 @@ export default function FavoritesPage() {
     }
 
     fetchData()
-  }, [])
+  }, [authLoading, user])
 
   // 여기서 it.id를 문자열로 변환해서 비교
   // all이 배열이 아닐 수 있으므로 안전하게 처리
