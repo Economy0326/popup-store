@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createReport, fetchMyReports } from '../api/reports'
 import { useAuth } from '../hooks/useAuth'
-import { startNaverLogin } from '../api/auth'
+import LoginRequired from '../components/LoginRequired'
 
 const MAX_REPORTS = 3
 
@@ -67,31 +67,24 @@ export default function RegisterPage() {
     }
   }
 
-  // 로그인 체크
+  // 로그인 상태 로딩 중
   if (authLoading) {
     return (
-      <div className="bg-bg min-h-[60vh] flex items-center justify-center">
-        <p className="text-sm text-textMuted">로그인 상태를 확인하는 중입니다...</p>
+      <div className="bg-bg min-h-[60vh] flex items-center justify-center text-sm text-textMuted">
+        로그인 상태를 확인하는 중입니다...
       </div>
     )
   }
 
+  // 비로그인 → 공통 컴포넌트 사용
   if (!user) {
     return (
-      <div className="bg-bg min-h-[60vh] flex items-center justify-center">
-        <div className="bg-white border border-line rounded-2xl px-6 py-8 max-w-md text-center space-y-3 shadow-soft">
-          <h1 className="text-xl font-semibold">로그인 후 제보할 수 있어요</h1>
-          <p className="text-sm text-textMuted">
-            팝업 제보는 악성 이용 방지를 위해 로그인한 사용자만 가능합니다.
-          </p>
-          <button
-            onClick={startNaverLogin}
-            className="mt-2 inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#03C75A] text-white text-sm font-medium"
-          >
-            네이버 로그인
-          </button>
-        </div>
-      </div>
+      <LoginRequired
+        title="로그인 후 제보할 수 있어요"
+        description={
+          '팝업 제보는 악성 이용 방지를 위해\n로그인한 사용자만 가능합니다.'
+        }
+      />
     )
   }
 

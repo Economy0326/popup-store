@@ -14,7 +14,8 @@ export const CATEGORY_LABEL_MAP: Record<string, string> = {
   etc: '기타',
 } as const
 
-export function getCategoryLabel(category?: string | null) {
-  if (!category) return null
-  return CATEGORY_LABEL_MAP[category] ?? category
+// 여러 개 카테고리 코드 → 한글 라벨 배열
+export function getCategoryLabels(codes?: string[] | null): string[] {
+  if (!codes || codes.length === 0) return []
+  return codes.map((code) => CATEGORY_LABEL_MAP[code] ?? code)
 }

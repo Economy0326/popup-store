@@ -10,9 +10,9 @@ export default function MonthSelector({
   onChange,
 }: MonthSelectorProps) {
   return (
-    // 작은 화면에서 원들이 안 짤리도록 가로 스크롤 허용
-    <div className="max-w-full overflow-x-auto py-1">
-      <div className="flex items-center gap-1 sm:gap-2">
+    <div className="max-w-full overflow-x-auto py-1 no-scrollbar">
+      {/* 양옆 padding으로 안 잘리게 */}
+      <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
         {MONTHS.map((m) => {
           const isActive = selected === m
 
@@ -26,13 +26,14 @@ export default function MonthSelector({
                 rounded-full
                 border
                 flex items-center justify-center
+                shrink-0
                 transition-all duration-200
                 transform
                 outline-none focus:outline-none focus-visible:outline-none focus:ring-0  
                 ${
                   isActive
                     ? 'bg-primary border-primary text-white scale-110'
-                    : 'bg-card border-line text-textMuted hover:scale-120 hover:bg-primary hover:border-primary hover:text-white'
+                    : 'bg-card border-line text-textMuted hover:scale-110 hover:bg-primary hover:border-primary hover:text-white'
                 }
               `}
             >

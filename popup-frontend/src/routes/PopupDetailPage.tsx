@@ -1,9 +1,8 @@
-// src/routes/PopupDetailPage.tsx
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import NaverMap from '../components/NaverMap'
 import GridSection from '../components/GridSection'
-import { getCategoryLabel } from '../lib/categoryMap'
+import { getCategoryLabels } from '../lib/categoryMap'
 import { useFavorites } from '../hooks/useFavorites'
 import { useAuth } from '../hooks/useAuth'
 import type { PopupItem } from '../types/popup'
@@ -75,12 +74,14 @@ export default function PopupDetailPage() {
   }
 
   const favored = isFavorite(Number(popup.id))
-  const categoryLabel = getCategoryLabel(popup.category)
+
+  // 여러 카테고리 → 한글 라벨 배열
+  const categoryLabels = getCategoryLabels(popup.categories)
 
   // hero용 대표 이미지 결정
   const images: string[] = (popup.images ?? []) as string[]
   const heroImage = images[0] ?? popup.thumbnail ?? null
-  
+
   return (
     <div className="bg-bg min-h-[60vh]">
       {/* Hero 영역 */}
@@ -129,7 +130,7 @@ export default function PopupDetailPage() {
               Popup Store
             </p>
             <h1 className="text-2xl md:text-3xl font-semibold mt-1">
-              {popup.title}
+              {popup.title ?? popup.name}
             </h1>
             <p className="text-sm text-textMuted mt-1">
               {popup.regionLabel ?? popup.address ?? '지역 정보 준비 중'}
@@ -161,11 +162,15 @@ export default function PopupDetailPage() {
             </span>
           )}
 
-          {categoryLabel && (
-            <span className="px-3 py-1 rounded-full bg-white border border-line">
-              #{categoryLabel}
+          {/* 여러 카테고리 해시태그 출력 */}
+          {categoryLabels.map((label) => (
+            <span
+              key={label}
+              className="px-3 py-1 rounded-full bg-white border border-line"
+            >
+              #{label}
             </span>
-          )}
+          ))}
 
           {popup.regionLabel && (
             <span className="px-3 py-1 rounded-full bg-white border border-line">
@@ -207,7 +212,7 @@ export default function PopupDetailPage() {
 
           {popup.lat && popup.lon ? (
             <div className="w-full h-56 rounded-xl2 overflow-hidden">
-              <NaverMap lat={popup.lat} lon={popup.lon} />
+              <NaverMap key={popup.id} lat={popup.lat} lon={popup.lon} />
             </div>
           ) : (
             <div className="w-full h-56 rounded-xl2 bg-slate-200 flex items-center justify-center text-xs text-textMuted">

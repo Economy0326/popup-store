@@ -1,93 +1,76 @@
+// src/routes/FavoritesPage.tsx
 import { useEffect, useMemo, useState } from 'react'
 import GridSection from '../components/GridSection'
 import FavoritesMap from '../components/FavoritesMap'
 import type { PopupItem } from '../types/popup'
 import { useAuth } from '../hooks/useAuth'
+import LoginRequired from '../components/LoginRequired'
+import { api } from '../api/client'
 
-type MeResponse = {
-  id: string
-  email?: string
-  nickname?: string
-  favoritePopupIds?: string[]
-}
+type FavoritesResponse = { items: PopupItem[] }
 
 export default function FavoritesPage() {
-  const { user, loading: authLoading, login } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
-  const [all, setAll] = useState<PopupItem[]>([])
-  const [favorites, setFavorites] = useState<string[]>([])
+  const [items, setItems] = useState<PopupItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
- // 비로그인일 때 바로 네이버 로그인으로
+  // 로그인된 경우에만 즐겨찾기 데이터 로딩
   useEffect(() => {
     if (authLoading) return
     if (!user) {
-      login() // startNaverLogin 호출됨
+      setLoading(false)
+      return
     }
-  }, [authLoading, user, login])
 
-  // 로그인된 경우에만 즐겨찾기 데이터 로딩
-  useEffect(() => {
-    if (authLoading || !user) return
-
-    const fetchData = async () => {
+    const fetchFavorites = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        // 팝업 전체 목록
-        const popupsRes = await fetch('/api/popups')
-        if (!popupsRes.ok) {
-          throw new Error('팝업 목록을 불러오지 못했습니다.')
-        }
-        const popupsJson = await popupsRes.json()
-        // HomePage에서는 { items: PopupItem[] } 형식이었지만
-        // 여기선 이미 전체 응답을 PopupItem[]로 가정하고 있었으니
-        // 실제 백엔드 응답에 맞게 아래 한 줄은 필요에 따라 조정
-        const popups: PopupItem[] = Array.isArray(popupsJson.items)
-          ? popupsJson.items
-          : popupsJson
-        setAll(popups)
-
-        // 내 정보 (즐겨찾기)
-        const meRes = await fetch('/api/users/me', {
-          credentials: 'include',
-        })
-        if (meRes.ok) {
-          const me: MeResponse = await meRes.json()
-          setFavorites(me.favoritePopupIds ?? [])
-        } else {
-          setFavorites([])
-        }
+        const res = await api<FavoritesResponse>('/api/users/me/favorites')
+        setItems(res.items ?? [])
       } catch (e: any) {
-        setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
+        setError(e.message ?? '즐겨찾기 정보를 불러오지 못했습니다.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchData()
+    fetchFavorites()
   }, [authLoading, user])
 
-  // 여기서 it.id를 문자열로 변환해서 비교
-  // all이 배열이 아닐 수 있으므로 안전하게 처리
-  const favoriteItems = useMemo(
-    () => {
-      const srcAll = Array.isArray(all) ? all : []
-      return srcAll.filter((it) => favorites.includes(String(it.id)))
-    },
-    [all, favorites]
+  const favoriteWithCoords = useMemo(
+    () =>
+      items.filter(
+        (it) => typeof it.lat === 'number' && typeof it.lon === 'number'
+      ),
+    [items]
   )
 
-  // favoriteItems가 배열이 아닐 가능성에 대비
-  const favoriteWithCoords = useMemo(() => {
-    const src = Array.isArray(favoriteItems) ? favoriteItems : []
-    return src.filter(
-      (it) => typeof it.lat === 'number' && typeof it.lon === 'number'
+  // 로그인 상태 확인 중
+  if (authLoading) {
+    return (
+      <div className="bg-bg min-h-[60vh] flex items-center justify-center text-sm text-textMuted">
+        로그인 상태를 확인하는 중입니다...
+      </div>
     )
-  }, [favoriteItems])
+  }
 
+  // 비로그인 → 공통 로그인 필요 컴포넌트 사용
+  if (!user) {
+    return (
+      <LoginRequired
+        title="로그인 후 즐겨찾기를 사용할 수 있어요"
+        description={
+          '찜한 팝업 목록은 로그인한 사용자에게만 제공됩니다.\n네이버 로그인을 통해 계속 진행해 주세요.'
+        }
+      />
+    )
+  }
+
+  // 로그인 + 데이터 로딩 중
   if (loading) {
     return (
       <div className="bg-bg min-h-[60vh] flex flex-col items-center justify-center text-sm text-textMuted">
@@ -96,6 +79,7 @@ export default function FavoritesPage() {
     )
   }
 
+  // 에러
   if (error) {
     return (
       <div className="bg-bg min-h-[60vh] flex flex-col items-center justify-center text-sm text-textMuted">
@@ -104,6 +88,7 @@ export default function FavoritesPage() {
     )
   }
 
+  // 정상 렌더
   return (
     <div className="bg-bg min-h-[60vh]">
       <section className="mx-auto max-w-6xl px-4 pt-10 pb-4 space-y-2">
@@ -119,10 +104,10 @@ export default function FavoritesPage() {
         </section>
       )}
 
-      {favoriteItems.length > 0 ? (
+      {items.length > 0 ? (
         <GridSection
           title="즐겨찾기한 팝업"
-          items={favoriteItems}
+          items={items}
           variant="grid"
           pageSize={12}
         />

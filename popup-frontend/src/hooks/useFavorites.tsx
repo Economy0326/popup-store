@@ -35,7 +35,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   // 로그인 상태
-  const { user, loading: authLoading, login } = useAuth()
+  const { user, loading: authLoading} = useAuth()
 
   // 초기 로딩: 로그인된 경우에만 즐겨찾기 요청
   useEffect(() => {
@@ -62,9 +62,9 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const toggleFavorite = async (id: IdLike) => {
     const numId = toNumber(id)
 
-    // 비로그인 → 네이버 로그인 바로 시도
+    // 비로그인 → 로그인 안내 후 종료
     if (!user) {
-      login() // AuthProvider 안의 startNaverLogin 실행
+      alert('로그인 후 즐겨찾기를 사용할 수 있어요.')
       return
     }
 

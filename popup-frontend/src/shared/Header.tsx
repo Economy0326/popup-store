@@ -1,4 +1,3 @@
-// src/components/Header.tsx
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -24,19 +23,17 @@ export default function Header() {
 
         {/* 오른쪽: 아이콘 + 로그인 영역 */}
         <div className="flex items-center gap-2">
-          {/* 데스크탑: 찜 아이콘 */}QD
+          {/* 데스크탑: 찜 아이콘 */}
           <Link
             to="/favorites"
             aria-label="찜한 팝업"
-            className="hidden md:inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 hover:bg-slate-50 transition"
+            className="hidden md:inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 hover:bg-slate-50 transition text-red-500"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-slate-700"
+              className="h-6 w-6"
               viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+              fill="currentColor"
             >
               <path d="M12 21s-5-3.33-8-6.67C2 12.5 2 9.5 4 7.5 5 6.5 6.5 6 7.9 6 9.3 6 10.7 6.7 12 8c1.3-1.3 2.7-2 4.1-2 1.4 0 2.9.5 3.9 1.5 2 2 2 5 0 6.83C17 17.67 12 21 12 21z" />
             </svg>
@@ -46,11 +43,11 @@ export default function Header() {
           <Link
             to="/register"
             aria-label="팝업 제보하기"
-            className="hidden md:inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 hover:bg-slate-50 transition"
+            className="hidden md:inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 hover:bg-slate-50 transition text-yellow-500"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-slate-700"
+              className="h-5 w-5"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"

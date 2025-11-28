@@ -1,4 +1,3 @@
-// src/components/PopupCard.tsx
 import { Link } from 'react-router-dom'
 import { useFavorites } from '../hooks/useFavorites'
 import { useAuth } from '../hooks/useAuth'
@@ -22,7 +21,7 @@ export default function PopupCard({ item }: { item: PopupItem }) {
       <Link to={`/popup/${item.id}`} className="block">
         <article className="bg-card border border-line rounded-xl2 shadow-soft overflow-hidden hover:-translate-y-1 hover:shadow-lg transition cursor-pointer relative">
           {/* 이미지 영역 */}
-          <div className="w-full aspect-[4/3] relative bg-slate-200 overflow-hidden">
+          <div className="w-full aspect-[3/2] relative bg-slate-200 overflow-hidden">
             {thumbnail && (
               <>
                 {/* 블러 배경 */}
@@ -45,7 +44,7 @@ export default function PopupCard({ item }: { item: PopupItem }) {
             )}
           </div>
 
-           {/* 로그인한 사용자에게만 하트 보여주기 */}
+          {/* 로그인한 사용자에게만 하트 보여주기 */}
           {user && (
             <button
               onClick={handleFav}
@@ -56,11 +55,13 @@ export default function PopupCard({ item }: { item: PopupItem }) {
             </button>
           )}
 
-          <div className="p-4">
-            <h3 className="font-semibold text-slate-900 line-clamp-1 mb-1">
+          {/* 텍스트 영역 */}
+          <div className="p-3 sm:p-3.5">
+            <h3 className="font-semibold text-slate-900 text-sm sm:text-base line-clamp-1 mb-1">
               {item.title ?? item.name ?? '제목 미정'}
             </h3>
-            <p className="text-xs text-textMuted mb-2">
+
+            <p className="text-[11px] sm:text-xs text-textMuted mb-1">
               {item.regionLabel ?? '지역 미정'}
             </p>
 

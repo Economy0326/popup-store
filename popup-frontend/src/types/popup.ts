@@ -13,7 +13,7 @@ export type PopupItem = {
   favoriteCount?: number
   images: string[]   // 이미지 URL 배열
   updated?: string   // 크롤링 기준 최신 업데이트 시간
-  category?: string  // 백엔드에서 정리해 주는 카테고리명
+  categories?: string[]  // 백엔드에서 정리해 주는 카테고리명
   regionLabel?: string // 예: '서울', '경기도 안성시' (주소에서 전처리)
   isFavorited?: boolean // 로그인 유저 기준 즐겨찾기 여부
 

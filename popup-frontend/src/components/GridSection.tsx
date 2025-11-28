@@ -39,9 +39,11 @@ export default function GridSection({
 
     const el = wrapRef.current
     if (!el) return
+
     const update = () => {
       setShowArrows(el.scrollWidth > el.clientWidth + 8)
     }
+
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
@@ -64,7 +66,7 @@ export default function GridSection({
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-6 sm:px-8 py-6">
+    <section className="relative mx-auto max-w-7xl px-6 sm:px-8 py-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-lg font-semibold whitespace-nowrap">
           {title}
@@ -72,44 +74,58 @@ export default function GridSection({
 
         <div className="flex items-center gap-3">
           {rightSlot}
-          {variant === 'carousel' && showArrows && (
-            <div className="hidden sm:flex gap-2">
-              <IconButton label="이전" onClick={() => scrollByViewport('left')}>
-                <ChevronLeft />
-              </IconButton>
-              <IconButton label="다음" onClick={() => scrollByViewport('right')}>
-                <ChevronRight />
-              </IconButton>
-            </div>
-          )}
         </div>
       </div>
 
       {variant === 'carousel' ? (
-        <div
-          ref={wrapRef}
-          className="relative -mx-2 px-2 overflow-x-auto scrollbar-thin scrollbar-thumb-rounded"
-          style={{ scrollBehavior: 'smooth' }}
-        >
-          <div className="flex gap-5 snap-x snap-mandatory">
-            {visibleItems.map((it) => (
-              <div
-                key={it.id}
-                className="snap-start shrink-0 w-[85%] sm:w-[48%] lg:w-[32%]"
-              >
-                <PopupCard item={it} />
-              </div>
-            ))}
+        <div className="relative">
+          <div
+            ref={wrapRef}
+            className="relative -mx-2 px-2 overflow-x-auto scrollbar-thin scrollbar-thumb-rounded"
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            <div className="flex gap-5 snap-x snap-mandatory">
+              {visibleItems.map((it) => (
+                <div
+                  key={it.id}
+                  className="snap-start shrink-0 w-[85%] sm:w-[48%] lg:w-[32%]"
+                >
+                  <PopupCard item={it} />
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* 카드 양쪽 화살표 (데스크탑/태블릿 이상) */}
+          {showArrows && (
+            <>
+              <button
+                aria-label="이전"
+                onClick={() => scrollByViewport('left')}
+                className="hidden sm:grid place-items-center absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 h-9 w-9 rounded-full border border-line bg-card shadow-soft"
+              >
+                <ChevronLeft />
+              </button>
+              <button
+                aria-label="다음"
+                onClick={() => scrollByViewport('right')}
+                className="hidden sm:grid place-items-center absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 h-9 w-9 rounded-full border border-line bg-card shadow-soft"
+              >
+                <ChevronRight />
+              </button>
+            </>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        // 3 x N 그리드
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-8">
           {visibleItems.map((it) => (
             <PopupCard key={it.id} item={it} />
           ))}
         </div>
       )}
 
+      {/* 모바일에서는 아래쪽에 화살표 */}
       {variant === 'carousel' && showArrows && (
         <div className="mt-3 flex sm:hidden justify-center gap-3">
           <IconButton label="이전" onClick={() => scrollByViewport('left')}>
@@ -168,6 +184,7 @@ function ChevronLeft() {
     </svg>
   )
 }
+
 function ChevronRight() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
