@@ -87,7 +87,8 @@ export default function HomePage() {
 
       const matchCategory =
         filters.category === '전체' ||
-        (item.category && item.category === filters.category)
+        (item.categories &&
+          item.categories.includes(filters.category))
 
       const matchDate =
         !filters.date ||
