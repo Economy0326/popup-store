@@ -16,14 +16,21 @@ async function toPopupItem(row, userId = null) {
     const parts = row.address.split(' ');
     regionLabel = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : parts[0];
   }
+  // yyyy-mm-dd 포맷 변환 함수
+  function formatDate(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d)) return '';
+    return d.toISOString().slice(0, 10);
+  }
   return {
     id: row.id,
     name: row.name,
     address: row.address,
     lat: row.mapy,
     lon: row.mapx,
-    startDate: row.start_date,
-    endDate: row.end_date,
+    startDate: formatDate(row.start_date),
+    endDate: formatDate(row.end_date),
     description: row.description,
     webSiteLink: row.site_link,
     weeklyViewCount: row.weekly_view_count,
