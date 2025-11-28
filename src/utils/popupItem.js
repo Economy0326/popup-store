@@ -37,7 +37,7 @@ async function toPopupItem(row, userId = null) {
     favoriteCount: row.favorite_count,
     images: imgRows.map(img => img.image_url),
     updated: row.updated_at,
-    category: catRows.map(cat => cat.name).join(','),
+    category: catRows.map(cat => cat.name),
     regionLabel,
     isFavorited
   };
