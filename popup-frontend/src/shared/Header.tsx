@@ -24,7 +24,7 @@ export default function Header() {
 
         {/* 오른쪽: 아이콘 + 로그인 영역 */}
         <div className="flex items-center gap-2">
-          {/* 데스크탑: 찜 아이콘 */}
+          {/* 데스크탑: 찜 아이콘 */}QD
           <Link
             to="/favorites"
             aria-label="찜한 팝업"

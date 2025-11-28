@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   fetchReports,
   saveReportAnswer,
+  adminDeleteReport,
   type ReportItem,
 } from '../api/reports'
 
@@ -14,6 +15,7 @@ export default function ReportsAdminPage() {
   // 각 제보별 임시 답변 입력값
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [savingId, setSavingId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const handleLoad = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,6 +55,11 @@ export default function ReportsAdminPage() {
   }
 
   const handleSaveAnswer = async (report: ReportItem) => {
+    if (report.answer) {
+      alert('이미 답변이 등록된 제보입니다. 수정할 수 없습니다.')
+      return
+    }
+
     const answer = (answers[report.id] ?? '').trim()
     if (!answer) {
       alert('답변 내용을 입력해 주세요.')
@@ -63,7 +70,7 @@ export default function ReportsAdminPage() {
       setSavingId(report.id)
       await saveReportAnswer(report.id, key.trim(), answer)
 
-      // UI에서도 바로 answer/answeredAt 반영
+      // UI 업데이트
       setReports((prev) =>
         prev.map((r) =>
           r.id === report.id
@@ -73,9 +80,26 @@ export default function ReportsAdminPage() {
       )
     } catch (e) {
       console.error(e)
-      alert('답변 저장에 실패했습니다. 다시 시도해 주세요.')
+      alert('답변 저장에 실패했습니다.')
     } finally {
       setSavingId(null)
+    }
+  }
+
+  const handleDeleteAdmin = async (report: ReportItem) => {
+    if (!confirm(`ID ${report.id} 제보를 삭제하시겠습니까?`)) return
+
+    try {
+      setDeletingId(report.id)
+      await adminDeleteReport(report.id, key.trim())
+
+      // UI에서 제거
+      setReports((prev) => prev.filter((r) => r.id !== report.id))
+    } catch (e) {
+      console.error(e)
+      alert('삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -122,7 +146,7 @@ export default function ReportsAdminPage() {
                   <th className="px-3 py-2">이름</th>
                   <th className="px-3 py-2">주소</th>
                   <th className="px-3 py-2">제보 내용</th>
-                  <th className="px-3 py-2 w-72">운영자 답변</th>
+                  <th className="px-3 py-2 w-80">운영자 답변</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,33 +161,43 @@ export default function ReportsAdminPage() {
                     <td className="px-3 py-2 whitespace-pre-line">
                       {r.description}
                       <div className="mt-1 text-[11px] text-textMuted">
-                        {new Date(r.reportedAt).toLocaleString()}
+                        {new Date(r.createdAt).toLocaleString()}
                       </div>
                     </td>
                     <td className="px-3 py-2">
                       <textarea
                         className="w-full h-20 border border-line rounded-md px-2 py-1 text-xs"
-                        value={answers[r.id] ?? ''}
+                        value={answers[r.id] ?? r.answer ?? ''}
                         onChange={(e) =>
                           handleChangeAnswer(r.id, e.target.value)
                         }
                         placeholder="해당 제보에 대한 답변을 입력해 주세요."
+                        disabled={!!r.answer} // 이미 답변 있으면 수정 불가
                       />
-                      <div className="mt-1 flex items-center justify-between">
+                      <div className="mt-1 flex items-center justify-between gap-2">
                         <span className="text-[11px] text-textMuted">
                           {r.answeredAt
-                            ? `마지막 저장: ${new Date(
+                            ? `답변 시간: ${new Date(
                                 r.answeredAt
                               ).toLocaleString()}`
                             : '아직 답변 없음'}
                         </span>
-                        <button
-                          onClick={() => handleSaveAnswer(r)}
-                          disabled={savingId === r.id}
-                          className="ml-2 px-3 py-1 rounded-full bg-green-600 text-white text-[11px] hover:bg-green-700 disabled:opacity-60"
-                        >
-                          {savingId === r.id ? '저장 중...' : '답변 저장'}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleSaveAnswer(r)}
+                            disabled={!!r.answer || savingId === r.id}
+                            className="px-3 py-1 rounded-full bg-green-600 text-white text-[11px] hover:bg-green-700 disabled:opacity-60"
+                          >
+                            {savingId === r.id ? '저장 중...' : '답변 저장'}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAdmin(r)}
+                            disabled={deletingId === r.id}
+                            className="px-3 py-1 rounded-full bg-red-500 text-white text-[11px] hover:bg-red-600 disabled:opacity-60"
+                          >
+                            {deletingId === r.id ? '삭제 중...' : '삭제'}
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>

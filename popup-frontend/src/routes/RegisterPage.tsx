@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createReport, fetchMyReports } from '../api/reports'
+import { useAuth } from '../hooks/useAuth'
+import { startNaverLogin } from '../api/auth'
+
+const MAX_REPORTS = 3
 
 export default function RegisterPage() {
+  const { user, loading: authLoading } = useAuth()
+
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [description, setDescription] = useState('')
@@ -10,38 +16,31 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 이 브라우저에서 이미 올린 제보 개수
   const [myCount, setMyCount] = useState<number | null>(null)
-  const [loadingMyReports, setLoadingMyReports] = useState(false)
+  const limitReached = myCount !== null && myCount >= MAX_REPORTS
 
-  const limit = 3
-  const limitReached = myCount !== null && myCount >= limit
-
-  // 내 제보 개수 로딩
+  // 내 제보 개수 로딩 (로그인 된 경우에만)
   useEffect(() => {
+    if (!user) return
+
     const load = async () => {
       try {
-        setLoadingMyReports(true)
         const res = await fetchMyReports()
         setMyCount(res.reports?.length ?? 0)
       } catch (e) {
         console.error(e)
-        // 실패해도 폼은 열어두고, 백엔드에서 최종적으로 막힌다고 생각
-      } finally {
-        setLoadingMyReports(false)
       }
     }
     load()
-  }, [])
+  }, [user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setSuccess(false)
 
-    // 프론트에서도 한 번 더 체크
     if (limitReached) {
-      setError(`제보는 최대 ${limit}개까지만 등록할 수 있습니다.`)
+      setError(`제보는 최대 ${MAX_REPORTS}개까지만 등록할 수 있습니다.`)
       return
     }
 
@@ -58,22 +57,50 @@ export default function RegisterPage() {
       setAddress('')
       setDescription('')
 
-      // 새로 1개 더 추가됐으니 개수 갱신
       setMyCount((prev) => (prev ?? 0) + 1)
     } catch (err: any) {
       console.error(err)
-      // 백엔드에서 LIMIT_EXCEEDED를 던졌을 수도 있으니 그냥 메시지 고정
-      setError('제보는 최대 3개까지만 등록할 수 있습니다.')
+      // 백엔드에서 limit 에러를 줄 수도 있으니 메시지를 이렇게 고정해도 무방
+      setError('제보 등록에 실패했습니다. 제보는 최대 3개까지만 가능합니다.')
     } finally {
       setLoading(false)
     }
   }
 
+  // 로그인 체크
+  if (authLoading) {
+    return (
+      <div className="bg-bg min-h-[60vh] flex items-center justify-center">
+        <p className="text-sm text-textMuted">로그인 상태를 확인하는 중입니다...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="bg-bg min-h-[60vh] flex items-center justify-center">
+        <div className="bg-white border border-line rounded-2xl px-6 py-8 max-w-md text-center space-y-3 shadow-soft">
+          <h1 className="text-xl font-semibold">로그인 후 제보할 수 있어요</h1>
+          <p className="text-sm text-textMuted">
+            팝업 제보는 악성 이용 방지를 위해 로그인한 사용자만 가능합니다.
+          </p>
+          <button
+            onClick={startNaverLogin}
+            className="mt-2 inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#03C75A] text-white text-sm font-medium"
+          >
+            네이버 로그인
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // 로그인된 상태
   return (
     <div className="bg-bg min-h-[60vh]">
       <div className="mx-auto max-w-6xl px-4 md:px-6 py-10">
         <div className="grid gap-10 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)] items-start">
-          {/* 설명 영역 */}
+          {/* 왼쪽 설명 */}
           <section className="space-y-3">
             <h1 className="text-2xl md:text-3xl font-bold text-text">
               팝업스토어 제보하기
@@ -84,23 +111,20 @@ export default function RegisterPage() {
             <ul className="mt-4 text-xs md:text-sm text-textMuted space-y-1 list-disc list-inside">
               <li>실제 운영 중이거나 예정된 팝업만 제보해 주세요.</li>
               <li>운영팀 검수 후 노출 여부와 위치가 결정됩니다.</li>
-              <li>필수 항목만 채워도 제보가 가능합니다.</li>
+              <li>한 계정당 최대 {MAX_REPORTS}개까지 제보할 수 있습니다.</li>
             </ul>
           </section>
 
           {/* 오른쪽: 내 제보 보기 + 폼 */}
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="text-[11px] text-textMuted">
-                {loadingMyReports
-                  ? '내 제보 내역을 확인하는 중입니다...'
-                  : myCount !== null
-                  ? `현재 이 브라우저에서 등록한 제보: ${myCount}개`
-                  : null}
-              </div>
+            <div className="flex justify-between items-center text-[11px] text-textMuted">
+              <span>
+                현재 내 계정으로 등록한 제보:{' '}
+                {myCount === null ? '-' : `${myCount}개 / 최대 ${MAX_REPORTS}개`}
+              </span>
               <Link
                 to="/my/reports"
-                className="text-xs md:text-sm px-3 py-1.5 rounded-full border border-line text-textMuted hover:bg-slate-50"
+                className="px-3 py-1.5 rounded-full border border-line hover:bg-slate-50"
               >
                 내 제보 보기
               </Link>
@@ -108,8 +132,7 @@ export default function RegisterPage() {
 
             {limitReached && (
               <p className="text-xs text-red-500">
-                제보는 최대 {limit}개까지만 등록할 수 있습니다. 추가 제보가 필요하다면
-                이메일로 문의해 주세요.
+                제보는 한 계정당 최대 {MAX_REPORTS}개까지 등록 가능합니다.
               </p>
             )}
 
@@ -127,7 +150,7 @@ export default function RegisterPage() {
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3 py-2 rounded-md border border-line bg-white text-sm"
                   placeholder="예: 강남 라이프스타일 팝업"
-                  disabled={limitReached}
+                  disabled={limitReached || loading}
                 />
               </div>
 
@@ -141,7 +164,7 @@ export default function RegisterPage() {
                   onChange={(e) => setAddress(e.target.value)}
                   className="w-full px-3 py-2 rounded-md border border-line bg-white text-sm"
                   placeholder="예: 서울특별시 강남구 테헤란로 123"
-                  disabled={limitReached}
+                  disabled={limitReached || loading}
                 />
               </div>
 
@@ -154,13 +177,11 @@ export default function RegisterPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full px-3 py-2 rounded-md border border-line bg-white text-sm min-h-[100px]"
                   placeholder="행사 기간, 브랜드, 특징 등을 자유롭게 적어주세요."
-                  disabled={limitReached}
+                  disabled={limitReached || loading}
                 />
               </div>
 
-              {error && (
-                <p className="text-xs text-red-500">{error}</p>
-              )}
+              {error && <p className="text-xs text-red-500">{error}</p>}
 
               {success && (
                 <p className="text-xs text-green-600">
