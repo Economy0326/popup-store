@@ -75,12 +75,13 @@ export default function PopupDetailPage() {
 
   const favored = isFavorite(Number(popup.id))
 
-  // 여러 카테고리 → 한글 라벨 배열
-  const categoryLabels = getCategoryLabels(popup.categories)
+  // categories 배열만 사용
+  const categoryCodes: string[] = popup.categories ?? []
+  const categoryLabels = getCategoryLabels(categoryCodes)
 
-  // hero용 대표 이미지 결정
+  // hero용 대표 이미지
   const images: string[] = (popup.images ?? []) as string[]
-  const heroImage = images[0] ?? popup.thumbnail ?? null
+  const heroImage = popup.thumbnail ?? images[0] ?? null
 
   return (
     <div className="bg-bg min-h-[60vh]">
@@ -102,7 +103,7 @@ export default function PopupDetailPage() {
               </>
             )}
 
-            {/* 앞 카드: 실제 이미지는 contain으로 안 잘리게 */}
+            {/* 앞 카드 */}
             <div className="absolute inset-4 md:inset-6 flex items-center justify-center">
               <div className="w-full h-full rounded-2xl bg-slate-950/80 border border-white/10 shadow-2xl flex items-center justify-center overflow-hidden">
                 {heroImage ? (
@@ -123,7 +124,7 @@ export default function PopupDetailPage() {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-8 space-y-4">
-        {/* 헤더 영역 (타이틀 + 즐겨찾기 버튼) */}
+        {/* 헤더 영역 */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide">
@@ -137,7 +138,7 @@ export default function PopupDetailPage() {
             </p>
           </div>
 
-          {/* ♥ 즐겨찾기 버튼 + 로그인 때만 뜸 */}
+          {/* 즐겨찾기 버튼 */}
           {user && (
             <button
               onClick={() => toggleFavorite(Number(popup.id))}
@@ -210,7 +211,7 @@ export default function PopupDetailPage() {
             {popup.address || '상세 주소 정보는 추후 업데이트 예정입니다.'}
           </p>
 
-          {popup.lat && popup.lon ? (
+          {typeof popup.lat === 'number' && typeof popup.lon === 'number' ? (
             <div className="w-full h-56 rounded-xl2 overflow-hidden">
               <NaverMap key={popup.id} lat={popup.lat} lon={popup.lon} />
             </div>

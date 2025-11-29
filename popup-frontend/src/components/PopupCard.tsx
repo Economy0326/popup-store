@@ -17,7 +17,7 @@ export default function PopupCard({ item }: { item: PopupItem }) {
   const thumbnail = item.thumbnail ?? item.images?.[0] ?? null
 
   return (
-    <div className="relative">
+    <div id={`popup-card-${item.id}`} className="relative">
       <Link to={`/popup/${item.id}`} className="block">
         <article className="bg-card border border-line rounded-xl2 shadow-soft overflow-hidden hover:-translate-y-1 hover:shadow-lg transition cursor-pointer relative">
           {/* 이미지 영역 */}

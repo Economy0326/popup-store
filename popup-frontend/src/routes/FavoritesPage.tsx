@@ -94,12 +94,12 @@ export default function FavoritesPage() {
       <section className="mx-auto max-w-6xl px-4 pt-10 pb-4 space-y-2">
         <h1 className="text-2xl font-semibold">내 즐겨찾기 팝업스토어</h1>
         <p className="text-sm text-textMuted">
-          즐겨찾기한 팝업스토어를 지도와 리스트로 한 번에 확인하세요.
+          즐겨찾기한 팝업스토어를 지도와 리스트로 확인하세요.
         </p>
       </section>
 
       {favoriteWithCoords.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 pb-6">
+        <section className="mx-auto max-w-7xl px-6 sm:px-8 pb-6">
           <FavoritesMap items={favoriteWithCoords} />
         </section>
       )}

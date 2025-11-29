@@ -1,140 +1,127 @@
 import { useEffect, useRef } from 'react'
 import type { PopupItem } from '../types/popup'
-import { useNavigate } from 'react-router-dom'
 
-declare global {
-  interface Window {
-    naver: any
-  }
-}
+const SEOUL_CENTER = { lat: 37.5665, lon: 126.978 }
 
-type Props = {
+interface FavoritesMapProps {
   items: PopupItem[]
 }
 
-const SEOUL_CENTER = { lat: 37.5665, lon: 126.9780 } // 서울 시청 근처
-
-export default function FavoritesMap({ items }: Props) {
-  const mapRef = useRef<HTMLDivElement | null>(null)
+export default function FavoritesMap({ items }: FavoritesMapProps) {
+  const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<any>(null)
   const markersRef = useRef<any[]>([])
-  const openedInfoRef = useRef<any | null>(null)
-  const navigate = useNavigate()
+  const openedInfoRef = useRef<any>(null)
+  const retryTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!window.naver || !mapRef.current) return
+    if (!mapRef.current) return
 
-    const { naver } = window
+    let cancelled = false
 
-    // 지도는 처음 한 번만 생성, 기본 중심은 서울
-    if (!mapInstance.current) {
-      mapInstance.current = new naver.maps.Map(mapRef.current, {
-        center: new naver.maps.LatLng(SEOUL_CENTER.lat, SEOUL_CENTER.lon),
-        zoom: 11,
-      })
-    }
-
-    const map = mapInstance.current
-
-    // 이전 마커/말풍선 정리
-    markersRef.current.forEach((m) => m.setMap(null))
-    markersRef.current = []
-    if (openedInfoRef.current) {
-      openedInfoRef.current.close()
-      openedInfoRef.current = null
-    }
-
-    // 즐겨찾기 없으면 서울 화면만
-    if (!items.length) {
-      map.setCenter(
-        new naver.maps.LatLng(SEOUL_CENTER.lat, SEOUL_CENTER.lon)
-      )
-      map.setZoom(11)
-      return
-    }
-
-    const bounds = new naver.maps.LatLngBounds()
-    let hasValidMarker = false
-
-    items.forEach((p) => {
-      if (typeof p.lat !== 'number' || typeof p.lon !== 'number') return
-
-      const position = new naver.maps.LatLng(p.lat, p.lon)
-      bounds.extend(position)
-      hasValidMarker = true
-
-      const marker = new naver.maps.Marker({
-        position,
-        map,
-      })
-      markersRef.current.push(marker)
-
-      // InfoWindow content를 실제 DOM 요소로 생성
-      const contentEl = document.createElement('div')
-      contentEl.style.padding = '6px 8px'
-      contentEl.style.fontSize = '12px'
-      contentEl.style.cursor = 'pointer'
-      contentEl.innerHTML = `
-        <b>${p.title}</b><br/>
-        <span>${p.regionLabel ?? ''}</span>
-      `
-
-      // DOM 요소에 직접 클릭 이벤트 연결 (네이버 DOM 이벤트 유틸 사용)
-      naver.maps.Event.addDOMListener(contentEl, 'click', (e: MouseEvent) => {
-        e.preventDefault()
-        navigate(`/popup/${p.id}`)
-      })
-
-      const info = new naver.maps.InfoWindow({
-        content: contentEl,
-        clickable: true,
-      })
-
-      // 마커 클릭 → 이전 말풍선 닫고 현재 것만 열기
-      naver.maps.Event.addListener(marker, 'click', () => {
-        if (openedInfoRef.current && openedInfoRef.current !== info) {
-          openedInfoRef.current.close()
-        }
-        info.open(map, marker)
-        openedInfoRef.current = info
-      })
-    })
-
-    // 마커 기준으로 fitBounds + 줌 클램프
-    if (hasValidMarker) {
-      map.fitBounds(bounds)
-
-      const zoom = map.getZoom()
-      const MIN_ZOOM = 9
-      const MAX_ZOOM = 15
-
-      if (zoom < MIN_ZOOM) {
-        map.setZoom(MIN_ZOOM)
-      } else if (zoom > MAX_ZOOM) {
-        map.setZoom(MAX_ZOOM)
+    const init = () => {
+      if (cancelled) return
+      if (!window.naver || !window.naver.maps) {
+        retryTimerRef.current = window.setTimeout(init, 100)
+        return
       }
-    } else {
-      map.setCenter(
-        new naver.maps.LatLng(SEOUL_CENTER.lat, SEOUL_CENTER.lon)
-      )
-      map.setZoom(11)
-    }
 
-    // cleanup
-    return () => {
+      const { naver } = window
+
+      // 지도 생성 (최초 1회)
+      if (!mapInstance.current) {
+        mapInstance.current = new naver.maps.Map(mapRef.current, {
+          center: new naver.maps.LatLng(SEOUL_CENTER.lat, SEOUL_CENTER.lon),
+          zoom: 11,
+        })
+      }
+
+      const map = mapInstance.current
+
+      // 기존 마커 삭제
       markersRef.current.forEach((m) => m.setMap(null))
       markersRef.current = []
+
       if (openedInfoRef.current) {
         openedInfoRef.current.close()
         openedInfoRef.current = null
       }
+
+      if (!items.length) return
+
+      const bounds = new naver.maps.LatLngBounds()
+
+      items.forEach((p) => {
+        if (typeof p.lat !== 'number' || typeof p.lon !== 'number') return
+
+        const position = new naver.maps.LatLng(p.lat, p.lon)
+        bounds.extend(position)
+
+        const marker = new naver.maps.Marker({
+          position,
+          map,
+        })
+
+        markersRef.current.push(marker)
+
+        // InfoWindow content 생성 (말풍선)
+        const contentEl = document.createElement('div')
+        contentEl.style.padding = '6px 8px'
+        contentEl.style.fontSize = '12px'
+        contentEl.style.cursor = 'pointer'
+        contentEl.innerHTML = `
+          <b>${p.title ?? p.name}</b><br/>
+          <span>${p.regionLabel ?? ''}</span>
+        `
+
+        const info = new naver.maps.InfoWindow({
+          content: contentEl,
+          clickable: true,
+        })
+
+        // 마커 클릭 → 말풍선만 열기
+        naver.maps.Event.addListener(marker, 'click', () => {
+          if (openedInfoRef.current && openedInfoRef.current !== info) {
+            openedInfoRef.current.close()
+          }
+          info.open(map, marker)
+          openedInfoRef.current = info
+        })
+
+        // 말풍선 클릭 → 리스트 카드로 스크롤 + 하이라이트
+        naver.maps.Event.addDOMListener(contentEl, 'click', (e: MouseEvent) => {
+          e.preventDefault()
+
+          const targetCard = document.getElementById(`popup-card-${p.id}`)
+          if (targetCard) {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+            // highlight 효과
+            targetCard.classList.add('ring-2', 'ring-blue-500')
+            setTimeout(() => {
+              targetCard.classList.remove('ring-2', 'ring-blue-500')
+            }, 1200)
+          }
+        })
+      })
+
+      // 모든 마커 포함하도록 지도 조정
+      map.fitBounds(bounds)
+      const zoom = map.getZoom()
+
+      if (zoom < 9) map.setZoom(9)
+      if (zoom > 15) map.setZoom(15)
     }
-  }, [items, navigate])
+
+    init()
+
+    return () => {
+      cancelled = true
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
+    }
+  }, [items])
 
   return (
-    <div
-      ref={mapRef}
-      className="w-full h-64 md:h-80 rounded-xl2 bg-slate-200 shadow-soft naver-map-wrapper"
-    />
+    <div ref={mapRef} className="w-full h-72 rounded-xl2 overflow-hidden" />
   )
 }

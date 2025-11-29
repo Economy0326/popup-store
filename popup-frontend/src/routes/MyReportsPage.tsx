@@ -55,10 +55,6 @@ export default function MyReportsPage() {
   }
 
   const handleDelete = async (report: ReportItem) => {
-    if (report.answer) {
-      alert('운영자 답변이 등록된 제보는 삭제할 수 없습니다.')
-      return
-    }
     if (!confirm('해당 제보를 삭제하시겠습니까?')) return
 
     try {
@@ -113,7 +109,7 @@ export default function MyReportsPage() {
                   <span className="text-xs font-semibold">운영자 답변</span>
                   <button
                     onClick={() => handleDelete(r)}
-                    disabled={!!r.answer || deletingId === r.id}
+                    disabled={deletingId === r.id}
                     className="text-[11px] px-2 py-1 rounded-full border border-line text-textMuted hover:bg-slate-50 disabled:opacity-40"
                   >
                     {deletingId === r.id ? '삭제 중...' : '제보 삭제'}

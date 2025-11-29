@@ -2,12 +2,19 @@ import { api } from './client'
 import type { PopupItem } from '../types/popup'
 
 // 홈 화면
-export async function fetchHomePopups() {
+export async function fetchHomePopups(params?: { month?: string }) {
+  let path = '/api/popups/home'
+
+  if (params?.month) {
+    const qs = new URLSearchParams({ month: params.month })
+    path += `?${qs.toString()}`
+  }
+
   return api<{
     latest: PopupItem[]
     popular: PopupItem[]
     monthly: PopupItem[]
-  }>('/api/popups/home')
+  }>(path)
 }
 
 // 검색 / 필터
@@ -40,12 +47,12 @@ export async function fetchPopupDetail(id: number) {
   return api<PopupItem>(`/api/popups/${id}`)
 }
 
-// 비슷한 팝업
+// 비슷한 팝업 (카테고리 기준)
 export async function fetchSimilarPopups(id: number) {
   return api<{ items: PopupItem[] }>(`/api/popups/${id}/similar`)
 }
 
-// 가까운 팝업
+// 가까운 팝업 (주변 지역 기준)
 export async function fetchNearbyPopups(id: number) {
   return api<{ items: PopupItem[] }>(`/api/popups/${id}/nearby`)
 }
