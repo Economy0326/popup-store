@@ -186,7 +186,7 @@ router.get('/:id/similar', async (req, res) => {
       'SELECT c.name FROM categories c JOIN popup_categories pc ON c.id = pc.category_id WHERE pc.popup_id = ?', [popupId]
     );
     if (catRows.length === 0) {
-      return res.json([]); // 카테고리 없으면 비슷한 팝업 없음
+      return res.json({ items: [] }); // 카테고리 없으면 비슷한 팝업 없음
     }
     // 모든 카테고리 기준으로 비슷한 팝업 추천
     const categories = catRows.map(row => row.name);
@@ -202,7 +202,7 @@ router.get('/:id/similar', async (req, res) => {
     const [rows] = await db.promise().query(query, [...categories, popupId]);
     const userId = req.session.user?.id || null;
     const items = await Promise.all(rows.map(row => toPopupItem(row, userId)));
-    res.json(items);
+    res.json({ items });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
