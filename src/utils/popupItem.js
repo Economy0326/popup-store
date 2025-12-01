@@ -16,11 +16,11 @@ async function toPopupItem(row, userId = null) {
     const parts = row.address.split(' ');
     regionLabel = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : parts[0];
   }
-  // yyyy-mm-dd 포맷 변환 함수
+  // yyyy-mm-dd 포맷 변환 함수 (null/invalid이면 '미정' 반환)
   function formatDate(date) {
-    if (!date) return '';
+    if (!date) return '미정';
     const d = new Date(date);
-    if (isNaN(d)) return '';
+    if (isNaN(d)) return '미정';
     return d.toISOString().slice(0, 10);
   }
   return {
