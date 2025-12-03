@@ -1,20 +1,24 @@
 import { api } from './client'
 import type { PopupItem } from '../types/popup'
 
-// 홈 화면
-export async function fetchHomePopups(params?: { month?: string }) {
-  let path = '/api/popups/home'
 
-  if (params?.month) {
-    const qs = new URLSearchParams({ month: params.month })
-    path += `?${qs.toString()}`
-  }
-
+// 홈 최초 진입용: latest + popular + 이번 달 monthly
+export async function fetchHomeInitial() {
   return api<{
     latest: PopupItem[]
     popular: PopupItem[]
     monthly: PopupItem[]
-  }>(path)
+  }>('/api/home')
+}
+
+// 월 바뀔 때: 해당 month의 monthly만
+export async function fetchHomeMonthly(params: { month: string }) {
+  // URLSearchParams: key=value 형태로 변환
+  const qs = new URLSearchParams({ month: params.month })
+
+  return api<{
+    monthly: PopupItem[]
+  }>(`/api/home?${qs.toString()}`)
 }
 
 // 검색 / 필터

@@ -50,12 +50,14 @@ export default function FavoritesMap({ items }: FavoritesMapProps) {
       if (!items.length) return
 
       const bounds = new naver.maps.LatLngBounds()
+      let hasAnyMarker = false // 에러 체크용
 
       items.forEach((p) => {
         if (typeof p.lat !== 'number' || typeof p.lon !== 'number') return
 
         const pos = new naver.maps.LatLng(p.lat, p.lon)
         bounds.extend(pos)
+        hasAnyMarker = true // 하나라도 추가되면 true
 
         const marker = new naver.maps.Marker({
           position: pos,
@@ -79,7 +81,6 @@ export default function FavoritesMap({ items }: FavoritesMapProps) {
           clickable: true,
         })
 
-        // 마커 클릭 → 말풍선만 열기
         naver.maps.Event.addListener(marker, 'click', () => {
           if (openedInfoRef.current && openedInfoRef.current !== info) {
             openedInfoRef.current.close()
@@ -88,11 +89,9 @@ export default function FavoritesMap({ items }: FavoritesMapProps) {
           openedInfoRef.current = info
         })
 
-        // 말풍선 클릭 → 리스트 카드로 스크롤 + 하이라이트
         naver.maps.Event.addDOMListener(contentEl, 'click', (e: MouseEvent) => {
           e.preventDefault()
 
-          // 네이버 내부 click 처리 → 한 프레임 뒤에 스크롤
           window.setTimeout(() => {
             const targetCard = document.getElementById(`popup-card-${p.id}`)
             if (!targetCard) {
@@ -114,7 +113,7 @@ export default function FavoritesMap({ items }: FavoritesMapProps) {
       })
 
       // 모든 마커 포함하도록 지도 조정
-      if (!bounds.isEmpty()) {
+      if (hasAnyMarker) {
         map.fitBounds(bounds)
 
         const zoom = map.getZoom()
