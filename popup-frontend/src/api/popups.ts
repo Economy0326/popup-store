@@ -8,7 +8,7 @@ export async function fetchHomeInitial() {
     latest: PopupItem[]
     popular: PopupItem[]
     monthly: PopupItem[]
-  }>('/api/home')
+  }>('/api/popups/home')
 }
 
 // 월 바뀔 때: 해당 month의 monthly만
@@ -18,7 +18,7 @@ export async function fetchHomeMonthly(params: { month: string }) {
 
   return api<{
     monthly: PopupItem[]
-  }>(`/api/home?${qs.toString()}`)
+  }>(`/api/popups/home?${qs.toString()}`)
 }
 
 // 검색 / 필터

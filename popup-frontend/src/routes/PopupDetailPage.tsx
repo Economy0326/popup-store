@@ -75,8 +75,22 @@ export default function PopupDetailPage() {
 
   const favored = isFavorite(Number(popup.id))
 
-  // categories 배열만 사용
-  const categoryCodes: string[] = popup.categories ?? []
+  // categories 배열 + category 문자열 둘 다 지원
+  const rawCategories =
+    (popup as any).categories ?? (popup as any).category ?? null
+
+  let categoryCodes: string[] = []
+
+  if (Array.isArray(rawCategories)) {
+    categoryCodes = rawCategories
+  } else if (typeof rawCategories === 'string' && rawCategories.trim() !== '') {
+    // "fashion, beauty" 같은 형식도 대비
+    categoryCodes = rawCategories
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  }
+
   const categoryLabels = getCategoryLabels(categoryCodes)
 
   // hero용 대표 이미지
@@ -123,6 +137,7 @@ export default function PopupDetailPage() {
         </div>
       </div>
 
+      {/* 본문 */}
       <div className="mx-auto max-w-7xl px-6 sm:px-8 py-8 space-y-4">
         {/* 헤더 영역 */}
         <div className="flex items-start justify-between gap-4">

@@ -109,7 +109,6 @@ export default function FavoritesPage() {
           title="즐겨찾기한 팝업"
           items={items}
           variant="grid"
-          pageSize={12}
         />
       ) : (
         <section className="mx-auto max-w-7xl px-4 py-16 text-center text-textMuted text-sm">

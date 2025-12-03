@@ -3,39 +3,52 @@ import HeroSection, { type SearchFilters } from '../components/HeroSection'
 import GridSection from '../components/GridSection'
 import MonthSelector from '../components/MonthSelector'
 import type { PopupItem } from '../types/popup'
-import { fetchHomeInitial, fetchHomeMonthly, searchPopups } from '../api/popups'
+import {
+  fetchHomeInitial,
+  fetchHomeMonthly,
+  searchPopups,
+} from '../api/popups'
 
 export default function HomePage() {
-  const [selectedMonth, setSelectedMonth] = useState(
-    new Date().getMonth() + 1
-  )
+  const now = new Date()
+  const thisYear = now.getFullYear()
+  const thisMonth = now.getMonth() + 1
+  const initialMonthKey = `${thisYear}-${String(thisMonth).padStart(2, '0')}`
 
-  // latest / popular 는 월이 바뀌어도 그대로라서 따로 저장
+  // 유저가 선택한 달 (UI용)
+  const [selectedMonth, setSelectedMonth] = useState(thisMonth)
+
+  // latest / popular 는 공통
   const [homeBase, setHomeBase] = useState<{
     latest: PopupItem[]
     popular: PopupItem[]
   } | null>(null)
 
-  // month별 monthly 캐시
+  // month → monthly 캐시
   const [monthlyByMonth, setMonthlyByMonth] = useState<
-    // Record<key, value>
     Record<string, PopupItem[]>
   >({})
 
+  // 실제로 화면에 보여주는 month key
+  const [displayMonthKey, setDisplayMonthKey] =
+    useState<string>(initialMonthKey)
+
   const [searchResult, setSearchResult] = useState<PopupItem[] | null>(null)
 
-  const [loadingHome, setLoadingHome] = useState(true)
-  const [loadingMonthly, setLoadingMonthly] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const currentYear = new Date().getFullYear()
-  const currentMonthKey = `${currentYear}-${String(selectedMonth).padStart(2, '0')}`
+  // 현재 선택된 키 (데이터 요청용)
+  const currentMonthKey = `${thisYear}-${String(selectedMonth).padStart(
+    2,
+    '0'
+  )}`
 
-  // 첫 진입: /api/home 한 번 호출 (latest + popular + 이번 달 monthly)
+  // 첫 진입: /api/popups/home (latest + popular + 이번 달 monthly)
   useEffect(() => {
     const loadInitial = async () => {
       try {
-        setLoadingHome(true)
+        setInitialLoading(true)
         setError(null)
 
         const res = await fetchHomeInitial()
@@ -45,55 +58,56 @@ export default function HomePage() {
           popular: res.popular ?? [],
         })
 
-        // 서버는 이번 달 monthly 를 같이 내려줌
         setMonthlyByMonth((prev) => ({
           ...prev,
-          // ?? => null 이나 undefined 일 때 빈 배열로 처리
-          [currentMonthKey]: res.monthly ?? [],
+          [initialMonthKey]: res.monthly ?? [],
         }))
+
+        // 처음에는 보여주는 달도 현재 달
+        setDisplayMonthKey(initialMonthKey)
       } catch (e: any) {
         console.error(e)
         setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
       } finally {
-        setLoadingHome(false)
+        setInitialLoading(false)
       }
     }
 
     loadInitial()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) //의존성 빈 배열 => 최초 마운트 때만 실행
+  }, []) // 의존성 빈배열 => 최초 1번만
 
-  // 월 변경 시: /api/home?month=YYYY-MM 으로 monthly만 가져오기
+  // 월 변경 시: 새 달 데이터를 백그라운드에서만 불러오기
   useEffect(() => {
-    if (searchResult) return                      // 검색 모드일 땐 월별 로딩 안 함
-    if (monthlyByMonth[currentMonthKey]) return   // 이미 캐시 되어 있으면 안 불러옴
-    if (!homeBase) return                         // 초기 데이터도 없으면 대기
+    if (searchResult) return           // 검색 모드면 스킵
+    if (!homeBase) return              // 초기 로딩 전이면 스킵
+    if (monthlyByMonth[currentMonthKey]) return // 이미 캐시됐으면 스킵
 
     const loadMonthly = async () => {
       try {
-        setLoadingMonthly(true)
-        setError(null)
-
+        // 여기서도 로딩 텍스트/레이아웃 안 바꿈: 그냥 데이터만 받아옴
         const res = await fetchHomeMonthly({ month: currentMonthKey })
 
         setMonthlyByMonth((prev) => ({
           ...prev,
           [currentMonthKey]: res.monthly ?? [],
         }))
+
+        // 데이터 다 받았을 때만 화면에 보여주는 달을 교체
+        setDisplayMonthKey(currentMonthKey)
       } catch (e: any) {
         console.error(e)
-        setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
-      } finally {
-        setLoadingMonthly(false)
+        // 에러 나도 그냥 이전 달 데이터 계속 보여주면 됨
       }
     }
 
     loadMonthly()
   }, [currentMonthKey, searchResult, homeBase, monthlyByMonth])
 
-  const monthly = monthlyByMonth[currentMonthKey] ?? []
+  // 화면에 실제로 뿌리는 monthly 는 항상 displayMonthKey 기준
+  const monthly = monthlyByMonth[displayMonthKey] ?? []
 
-  // regionOptions: 홈 데이터에서 regionLabel 모아서 사용
+  // regionOptions: latest + popular + "현재 화면에 보이는 달"의 monthly 기준
   const regionOptions = useMemo(() => {
     if (!homeBase) return []
     const set = new Set<string>()
@@ -105,11 +119,10 @@ export default function HomePage() {
     return Array.from(set).sort()
   }, [homeBase, monthly])
 
-  const isInitialLoading = loadingHome && !homeBase && !searchResult
+  const isInitialLoading = initialLoading && !homeBase && !searchResult
 
   const handleSearch = async (next: SearchFilters) => {
     try {
-      setLoadingHome(true)
       setError(null)
 
       const res = await searchPopups({
@@ -126,8 +139,6 @@ export default function HomePage() {
       console.error(e)
       setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
       setSearchResult([])
-    } finally {
-      setLoadingHome(false)
     }
   }
 
@@ -181,17 +192,10 @@ export default function HomePage() {
                   title={`${selectedMonth}월 팝업스토어`}
                   items={monthly}
                   rightSlot={
-                    <div className="flex items-center gap-3">
-                      {loadingMonthly && (
-                        <span className="text-xs text-textMuted">
-                          해당 월 팝업을 불러오는 중...
-                        </span>
-                      )}
-                      <MonthSelector
-                        selected={selectedMonth}
-                        onChange={setSelectedMonth}
-                      />
-                    </div>
+                    <MonthSelector
+                      selected={selectedMonth}
+                      onChange={setSelectedMonth}
+                    />
                   }
                 />
               </>
