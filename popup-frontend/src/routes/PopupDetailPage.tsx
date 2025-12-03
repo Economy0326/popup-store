@@ -123,7 +123,7 @@ export default function PopupDetailPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 py-8 space-y-4">
+      <div className="mx-auto max-w-7xl px-6 sm:px-8 py-8 space-y-4">
         {/* 헤더 영역 */}
         <div className="flex items-start justify-between gap-4">
           <div>

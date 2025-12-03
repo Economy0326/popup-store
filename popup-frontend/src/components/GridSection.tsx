@@ -102,16 +102,16 @@ export default function GridSection({
               <button
                 aria-label="이전"
                 onClick={() => scrollByViewport('left')}
-                className="hidden sm:grid place-items-center absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 h-9 w-9 rounded-full border border-line bg-card shadow-soft"
+                className="hidden sm:grid place-items-center absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full h-11 w-11 rounded-full border border-line bg-card shadow-soft"
               >
-                <ChevronLeft />
+                <ChevronLeft large />
               </button>
               <button
                 aria-label="다음"
                 onClick={() => scrollByViewport('right')}
-                className="hidden sm:grid place-items-center absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 h-9 w-9 rounded-full border border-line bg-card shadow-soft"
+                className="hidden sm:grid place-items-center absolute right-0 top-1/2 -translate-y-1/2 translate-x-full h-11 w-11 rounded-full border border-line bg-card shadow-soft"
               >
-                <ChevronRight />
+                <ChevronRight large />
               </button>
             </>
           )}
@@ -171,13 +171,14 @@ function IconButton({
   )
 }
 
-function ChevronLeft() {
+function ChevronLeft({ large }: { large?: boolean }) {
+  const size = large ? 22 : 18
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path
         d="M15 6l-6 6 6 6"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -185,13 +186,14 @@ function ChevronLeft() {
   )
 }
 
-function ChevronRight() {
+function ChevronRight({ large }: { large?: boolean }) {
+  const size = large ? 22 : 18
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path
         d="M9 6l6 6-6 6"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

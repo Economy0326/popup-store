@@ -22,13 +22,13 @@ export default function FavoritesMap({ items }: FavoritesMapProps) {
     const init = () => {
       if (cancelled) return
       if (!window.naver || !window.naver.maps) {
-        retryTimerRef.current = window.setTimeout(init, 100)
+        retryTimerRef.current = window.setTimeout(init, 120)
         return
       }
 
       const { naver } = window
 
-      // 지도 생성 (최초 1회)
+      // 지도 최초 생성
       if (!mapInstance.current) {
         mapInstance.current = new naver.maps.Map(mapRef.current, {
           center: new naver.maps.LatLng(SEOUL_CENTER.lat, SEOUL_CENTER.lon),
@@ -38,7 +38,7 @@ export default function FavoritesMap({ items }: FavoritesMapProps) {
 
       const map = mapInstance.current
 
-      // 기존 마커 삭제
+      // 기존 마커 정리
       markersRef.current.forEach((m) => m.setMap(null))
       markersRef.current = []
 
@@ -54,24 +54,24 @@ export default function FavoritesMap({ items }: FavoritesMapProps) {
       items.forEach((p) => {
         if (typeof p.lat !== 'number' || typeof p.lon !== 'number') return
 
-        const position = new naver.maps.LatLng(p.lat, p.lon)
-        bounds.extend(position)
+        const pos = new naver.maps.LatLng(p.lat, p.lon)
+        bounds.extend(pos)
 
         const marker = new naver.maps.Marker({
-          position,
+          position: pos,
           map,
         })
 
         markersRef.current.push(marker)
 
-        // InfoWindow content 생성 (말풍선)
+        // InfoWindow content
         const contentEl = document.createElement('div')
         contentEl.style.padding = '6px 8px'
         contentEl.style.fontSize = '12px'
         contentEl.style.cursor = 'pointer'
         contentEl.innerHTML = `
           <b>${p.title ?? p.name}</b><br/>
-          <span>${p.regionLabel ?? ''}</span>
+          <span style="color:#666">${p.regionLabel ?? ''}</span>
         `
 
         const info = new naver.maps.InfoWindow({
@@ -92,36 +92,51 @@ export default function FavoritesMap({ items }: FavoritesMapProps) {
         naver.maps.Event.addDOMListener(contentEl, 'click', (e: MouseEvent) => {
           e.preventDefault()
 
-          const targetCard = document.getElementById(`popup-card-${p.id}`)
-          if (targetCard) {
-            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // 네이버 내부 click 처리 → 한 프레임 뒤에 스크롤
+          window.setTimeout(() => {
+            const targetCard = document.getElementById(`popup-card-${p.id}`)
+            if (!targetCard) {
+              console.warn('popup card not found for id:', p.id)
+              return
+            }
 
-            // highlight 효과
+            targetCard.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+            })
+
             targetCard.classList.add('ring-2', 'ring-blue-500')
-            setTimeout(() => {
+            window.setTimeout(() => {
               targetCard.classList.remove('ring-2', 'ring-blue-500')
             }, 1200)
-          }
+          }, 0)
         })
       })
 
       // 모든 마커 포함하도록 지도 조정
-      map.fitBounds(bounds)
-      const zoom = map.getZoom()
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds)
 
-      if (zoom < 9) map.setZoom(9)
-      if (zoom > 15) map.setZoom(15)
+        const zoom = map.getZoom()
+        if (zoom < 9) map.setZoom(9)
+        if (zoom > 15) map.setZoom(15)
+      }
     }
 
     init()
 
     return () => {
       cancelled = true
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current)
+      }
     }
   }, [items])
 
   return (
-    <div ref={mapRef} className="w-full h-72 rounded-xl2 overflow-hidden" />
+    <div
+      ref={mapRef}
+      className="w-full h-72 sm:h-80 md:h-96 rounded-xl2 overflow-hidden"
+    />
   )
 }

@@ -18,11 +18,18 @@ export default function LoginRequired({
         <p className="text-sm text-textMuted mb-5 whitespace-pre-line">
           {description}
         </p>
+
+        {/* 네이버 로그인 이미지 버튼 */}
         <button
+          type="button"
           onClick={login}
-          className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-[#03C75A] text-white text-sm font-medium hover:brightness-105"
+          className="inline-flex items-center justify-center focus:outline-none focus-visible:outline-none"
         >
-          네이버로 로그인
+          <img
+            src="/images/naver-login.png"
+            alt="네이버로 로그인"
+            className="h-10 sm:h-11 object-contain"
+          />
         </button>
       </div>
     </div>

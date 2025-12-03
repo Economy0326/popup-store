@@ -3,52 +3,64 @@ import HeroSection, { type SearchFilters } from '../components/HeroSection'
 import GridSection from '../components/GridSection'
 import MonthSelector from '../components/MonthSelector'
 import type { PopupItem } from '../types/popup'
-import { searchPopups } from '../api/popups'
-
-const MAX_NEW_DAYS = 7 // 최근 7일 이내만 "최신" 섹션에 표시
+import { fetchHomePopups, searchPopups } from '../api/popups'
 
 export default function HomePage() {
-  const [filters, setFilters] = useState<SearchFilters | null>(null)
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [selectedMonth, setSelectedMonth] = useState(
+    new Date().getMonth() + 1
+  )
 
-  const [all, setAll] = useState<PopupItem[]>([])
+  const [homeData, setHomeData] = useState<{
+    latest: PopupItem[]
+    popular: PopupItem[]
+    monthly: PopupItem[]
+  } | null>(null)
+
   const [searchResult, setSearchResult] = useState<PopupItem[] | null>(null)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 최초 진입 시 전체 리스트 한 번 로딩
+  // 홈 데이터 로딩: /api/popups/home
   useEffect(() => {
-    const fetchPopups = async () => {
+    // 검색 결과 모드일 때는 /home 다시 부르지 않음
+    if (searchResult) return
+
+    const loadHome = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        const res = await searchPopups({})
-        setAll(res.items)
+        const year = new Date().getFullYear()
+        const monthString = `${year}-${String(selectedMonth).padStart(2, '0')}`
+
+        const res = await fetchHomePopups({ month: monthString })
+        setHomeData(res)
       } catch (e: any) {
+        console.error(e)
         setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchPopups()
-  }, [])
+    loadHome()
+  }, [selectedMonth, searchResult])
 
-  // all에서 regionLabel만 뽑아서 추천 옵션으로 사용
+  // regionOptions: 홈 데이터에서 regionLabel 모아서 사용
   const regionOptions = useMemo(() => {
+    if (!homeData) return []
     const set = new Set<string>()
-    all.forEach((item) => {
-      if (item.regionLabel) set.add(item.regionLabel)
-    })
+
+    homeData.latest.forEach((i) => i.regionLabel && set.add(i.regionLabel))
+    homeData.popular.forEach((i) => i.regionLabel && set.add(i.regionLabel))
+    homeData.monthly.forEach((i) => i.regionLabel && set.add(i.regionLabel))
+
     return Array.from(set).sort()
-  }, [all])
+  }, [homeData])
 
-  // 검색 버튼 눌렀을 때: 서버 검색 + 검색 결과 모드 진입
+  // 검색 버튼 눌렀을 때: /api/popups 검색 모드
   const handleSearch = async (next: SearchFilters) => {
-    setFilters(next)
-
     try {
       setLoading(true)
       setError(null)
@@ -64,105 +76,13 @@ export default function HomePage() {
 
       setSearchResult(res.items)
     } catch (e: any) {
+      console.error(e)
       setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
       setSearchResult([])
     } finally {
       setLoading(false)
     }
   }
-
-  // 홈 3섹션용 필터
-  const applyFilters = (items: PopupItem[] | any): PopupItem[] => {
-    if (!filters) return Array.isArray(items) ? items : []
-
-    const src: PopupItem[] = Array.isArray(items) ? items : []
-
-    return src.filter((item) => {
-      const addressSource = item.address ?? item.regionLabel ?? ''
-
-      const matchLocation =
-        filters.location === '전체' ||
-        filters.location === '' ||
-        (addressSource && addressSource.includes(filters.location))
-
-      const matchCategory =
-        filters.category === '전체' ||
-        (item.categories &&
-          item.categories.includes(filters.category))
-
-      const matchDate =
-        !filters.date ||
-        (!item.startDate && !item.endDate) ||
-        (item.startDate &&
-          item.endDate &&
-          filters.date >= item.startDate &&
-          filters.date <= item.endDate)
-
-      return matchLocation && matchCategory && matchDate
-    })
-  }
-
-  // 새로 들어온 팝업: updated 기준으로 N일 이내 + 최신순
-  const latest = useMemo(() => {
-    const now = new Date()
-    const srcAll = Array.isArray(all) ? all : []
-
-    const withinRange = srcAll.filter((item) => {
-      if (!item.updated) return false
-      const updated = new Date(item.updated)
-      if (Number.isNaN(updated.getTime())) return false
-
-      const diffMs = now.getTime() - updated.getTime()
-      const diffDays = diffMs / (1000 * 60 * 60 * 24)
-
-      return diffDays >= 0 && diffDays <= MAX_NEW_DAYS
-    })
-
-    withinRange.sort((a, b) => {
-      const aTime = a.updated ? new Date(a.updated).getTime() : 0
-      const bTime = b.updated ? new Date(b.updated).getTime() : 0
-      return bTime - aTime
-    })
-
-    return applyFilters(withinRange)
-  }, [all, filters])
-
-  // 인기: 나중에 백엔드에서 인기순 정렬된 리스트를 주면 그대로 사용
-  const popular = useMemo(() => {
-    const srcAllForPopular = Array.isArray(all) ? all : []
-    const sorted = [...srcAllForPopular]
-    return applyFilters(sorted)
-  }, [all, filters])
-
-  // 선택한 월의 팝업
-  const monthly = useMemo(() => {
-    const srcAllForMonthly = Array.isArray(all) ? all : []
-
-    const filtered = srcAllForMonthly.filter((item) => {
-      if (!item.startDate && !item.endDate) return false
-
-      const selected = selectedMonth
-
-      const start = item.startDate ? new Date(item.startDate) : null
-      const end = item.endDate ? new Date(item.endDate) : null
-
-      if (start && Number.isNaN(start.getTime())) return false
-      if (end && Number.isNaN(end.getTime())) return false
-
-      if (start && end) {
-        const startMonth = start.getMonth() + 1
-        const endMonth = end.getMonth() + 1
-        return selected >= startMonth && selected <= endMonth
-      }
-
-      const baseDate = start ?? end
-      if (!baseDate) return false
-      const month = baseDate.getMonth() + 1
-      return month === selected
-    })
-
-    return applyFilters(filtered)
-  }, [all, filters, selectedMonth])
 
   const renderEmptySearch = () => (
     <div className="mx-auto max-w-7xl px-6 py-12 text-center text-sm text-textMuted">
@@ -200,14 +120,20 @@ export default function HomePage() {
                   pageSize={12}
                 />
               )
-            ) : (
-              // 홈 기본 모드: 3개 섹션
+            ) : homeData ? (
+              // 홈 기본 모드: /home 응답 3개 섹션
               <>
-                <GridSection title="새로 들어온 팝업스토어" items={latest} />
-                <GridSection title="인기 있는 팝업스토어" items={popular} />
+                <GridSection
+                  title="새로 들어온 팝업스토어"
+                  items={homeData.latest}
+                />
+                <GridSection
+                  title="인기 있는 팝업스토어"
+                  items={homeData.popular}
+                />
                 <GridSection
                   title={`${selectedMonth}월 팝업스토어`}
-                  items={monthly}
+                  items={homeData.monthly}
                   rightSlot={
                     <MonthSelector
                       selected={selectedMonth}
@@ -216,7 +142,7 @@ export default function HomePage() {
                   }
                 />
               </>
-            )}
+            ) : null}
           </>
         )}
       </div>

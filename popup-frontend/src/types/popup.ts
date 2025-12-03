@@ -13,19 +13,15 @@ export type PopupItem = {
   images: string[]   // 이미지 URL 배열
   updated?: string   // 크롤링 기준 최신 업데이트 시간
 
-  /**
-   * 하나의 팝업에 여러 카테고리 코드가 올 수 있음
-   * 예: ['fashion', 'beauty']
-   */
+  // 하나의 팝업에 여러 카테고리 코드가 올 수 있음
+  // 예: ['fashion', 'beauty']
   categories?: string[]
 
-  /**
-   * 주소에서 전처리된 지역 라벨
-   * 예: '서울 성동구', '경기도 안성시'
-   */
+  // 주소에서 전처리된 지역 라벨
+  // 예: '서울 성동구', '경기도 안성시'
   regionLabel?: string
 
-  /** 로그인 유저 기준 즐겨찾기 여부 */
+  //로그인 유저 기준 즐겨찾기 여부
   isFavorited?: boolean
 
   // 프론트(UI)에서만 쓰는 파생 필드

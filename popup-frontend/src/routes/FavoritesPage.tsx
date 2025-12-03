@@ -91,7 +91,7 @@ export default function FavoritesPage() {
   // 정상 렌더
   return (
     <div className="bg-bg min-h-[60vh]">
-      <section className="mx-auto max-w-6xl px-4 pt-10 pb-4 space-y-2">
+      <section className="mx-auto max-w-7xl px-4 pt-10 pb-4 space-y-2">
         <h1 className="text-2xl font-semibold">내 즐겨찾기 팝업스토어</h1>
         <p className="text-sm text-textMuted">
           즐겨찾기한 팝업스토어를 지도와 리스트로 확인하세요.
@@ -112,7 +112,7 @@ export default function FavoritesPage() {
           pageSize={12}
         />
       ) : (
-        <section className="mx-auto max-w-6xl px-4 py-16 text-center text-textMuted text-sm">
+        <section className="mx-auto max-w-7xl px-4 py-16 text-center text-textMuted text-sm">
           아직 즐겨찾기한 팝업이 없습니다.
           <br />
           메인 페이지에서 마음에 드는 팝업을 ♥ 아이콘으로 저장해 보세요.
