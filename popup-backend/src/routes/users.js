@@ -37,15 +37,13 @@ router.get('/me', async (req, res) => {
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const [rows] = await db.promise().query('SELECT id, nickname, profile_image FROM users WHERE id = ?', [userId]);
+    const [rows] = await db.promise().query('SELECT id, nickname FROM users WHERE id = ?', [userId]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-    // profileImage로 key 변환
     const user = {
       id: String(rows[0].id),
-      nickname: rows[0].nickname,
-      profileImage: rows[0].profile_image || undefined
+      nickname: rows[0].nickname
     };
     res.json(user);
   } catch (err) {
