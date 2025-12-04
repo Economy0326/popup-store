@@ -28,7 +28,13 @@ export default function PopupDetailPage() {
       setLoading(false)
       return
     }
+    
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
+
     const numericId = Number(id)
+    setLoading(true)
 
     async function load() {
       try {

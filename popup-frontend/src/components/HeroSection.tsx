@@ -1,4 +1,3 @@
-// src/components/HeroSection.tsx
 import { useState, useRef } from 'react'
 import { CATEGORY_LABEL_MAP } from '../lib/categoryMap'
 
@@ -62,14 +61,14 @@ export default function HeroSection({
       </div>
 
       {/* 텍스트 영역 */}
-      <div className="relative z-10 mx-auto max-w-6xl px-5 pt-16 pb-24 grid gap-10 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] items-center">
+      <div className="relative z-10 mx-auto max-w-6xl px-5 pt-16 pb-32 sm:pb-28 md:pb-24 grid gap-10 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] items-center">
         <div>
-          <h1 className="text-4xl md:text-5xl font-extrabold leading-tight drop-shadow-sm">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight drop-shadow-sm break-keep">
             요즘 가장 인기 있는
             <br />
             팝업을 한눈에
           </h1>
-          <p className="mt-4 text-base md:text-lg text-slate-100/90 max-w-xl">
+          <p className="text-sm md:text-base text-slate-100/90 max-w-xl">
             지역·날짜·카테고리로 원하는 팝업을 쉽게 찾아보세요.
             <br className="hidden md:block" />
             관심 팝업은 찜해두고 나만의 리스트를 만들어 보세요.
@@ -78,7 +77,7 @@ export default function HeroSection({
       </div>
 
       {/* 필터 바 */}
-      <div className="relative z-20 mx-auto max-w-5xl px-5 -mt-12 pb-6">
+      <div className="relative z-20 mx-auto max-w-5xl px-5 mt-4 sm:-mt-10 pb-6">
         <div className="grid grid-cols-1 sm:grid-cols-[1.3fr_1.3fr_1.3fr_0.9fr] gap-3 bg-white/98 rounded-2xl shadow-xl px-4 py-3 items-center border border-slate-200/70">
           {/* 지역 */}
           <div className="flex flex-col gap-1">
