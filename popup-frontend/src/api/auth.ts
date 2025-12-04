@@ -3,9 +3,7 @@ import { api, API_BASE } from './client'
 // 백엔드에서 내려주는 유저 타입 (필요 최소 필드만)
 export type User = {
   id: number
-  email?: string | null
-  nickname?: string | null
-  profileImage?: string | null
+  nickname: string | null
 }
 
 // 현재 로그인 유저 정보

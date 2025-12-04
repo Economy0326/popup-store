@@ -6,7 +6,7 @@ export default function Header() {
   const [open, setOpen] = useState(false)
   const { user, loading, login, logout } = useAuth()
 
-  const displayName = user?.nickname ?? user?.email ?? '로그인 완료'
+  const displayName = user?.nickname ?? '로그인 완료'
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-100">

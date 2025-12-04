@@ -40,8 +40,6 @@ router.get('/naver/callback', async (req, res) => {
       // 신규 유저면 DB에 저장
       await createUser({
         userid: profile.id,
-        profile_image: profile.profile_image,
-        name: profile.name,
         nickname: profile.nickname
       });
       user = await findUserByUserId(profile.id);
