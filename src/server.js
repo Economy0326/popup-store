@@ -38,7 +38,7 @@ app.use('/api/favorites', requireLogin, favoritesRouter);
 
 
 // 정적 파일 서빙
-app.use(express.static(path.join(__dirname, '../dist')));
+app.use(express.static(path.join(__dirname, '../../popup-frontend/dist')));
 // SPA 라우팅 지원: API가 아닌 GET 요청은 모두 index.html 반환
 app.use((req, res, next) => {
   if (
@@ -46,7 +46,7 @@ app.use((req, res, next) => {
     !req.path.startsWith('/api') &&
     !req.path.startsWith('/auth')
   ) {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
+    res.sendFile(path.join(__dirname, '../../popup-frontend/dist/index.html'));
   } else {
     next();
   }
