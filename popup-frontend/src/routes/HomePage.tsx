@@ -9,6 +9,17 @@ import {
   searchPopups,
 } from '../api/popups'
 
+// 🔹 검색 결과 페이지당 개수는 15개로 고정
+const SEARCH_PAGE_SIZE = 15
+
+// 🔹 검색 결과 + 페이지 정보까지 함께 들고 있을 형태
+type SearchResultState = {
+  items: PopupItem[]
+  page: number
+  pageSize: number
+  total: number
+} | null
+
 export default function HomePage() {
   const now = new Date()
   const thisYear = now.getFullYear()
@@ -33,7 +44,11 @@ export default function HomePage() {
   const [displayMonthKey, setDisplayMonthKey] =
     useState<string>(initialMonthKey)
 
-  const [searchResult, setSearchResult] = useState<PopupItem[] | null>(null)
+  // 🔹 검색 결과 전체(현재 페이지 아이템 + page/pageSize/total)
+  const [searchResult, setSearchResult] = useState<SearchResultState>(null)
+
+  // 🔹 어떤 필터로 검색 중인지 저장해두기 (페이지 이동 시 재사용)
+  const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null)
 
   const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -79,13 +94,19 @@ export default function HomePage() {
 
   // 월 변경 시: 새 달 데이터를 백그라운드에서만 불러오기
   useEffect(() => {
-    if (searchResult) return           // 검색 모드면 스킵
-    if (!homeBase) return              // 초기 로딩 전이면 스킵
-    if (monthlyByMonth[currentMonthKey]) return // 이미 캐시됐으면 스킵
+    // 검색 모드면 월 데이터는 건들지 않음
+    if (searchResult) return
+    if (!homeBase) return
+
+    // 🔧 [버그 수정] 이미 캐시된 달이면 API 호출하지 말고
+    // 단순히 displayMonthKey만 현재 달로 바꿔준다.
+    if (monthlyByMonth[currentMonthKey]) {
+      setDisplayMonthKey(currentMonthKey)
+      return
+    }
 
     const loadMonthly = async () => {
       try {
-        // 여기서도 로딩 텍스트/레이아웃 안 바꿈: 그냥 데이터만 받아옴
         const res = await fetchHomeMonthly({ month: currentMonthKey })
 
         setMonthlyByMonth((prev) => ({
@@ -121,25 +142,54 @@ export default function HomePage() {
 
   const isInitialLoading = initialLoading && !homeBase && !searchResult
 
-  const handleSearch = async (next: SearchFilters) => {
+  // 🔹 실제 검색 호출 로직을 함수로 분리 (초기 검색 + 페이지 이동 둘 다 여기 사용)
+  const runSearch = async (filters: SearchFilters, page: number) => {
     try {
       setError(null)
 
       const res = await searchPopups({
         region:
-          next.location === '전체' || next.location === ''
+          filters.location === '전체' || filters.location === ''
             ? undefined
-            : next.location,
-        category: next.category === '전체' ? undefined : next.category,
-        date: next.date || undefined,
+            : filters.location,
+        category: filters.category === '전체' ? undefined : filters.category,
+        date: filters.date || undefined,
+        page,
+        pageSize: SEARCH_PAGE_SIZE,
       })
 
-      setSearchResult(res.items)
+      setSearchResult({
+        items: res.items,
+        page: res.page,
+        pageSize: res.pageSize,
+        total: res.total,
+      })
     } catch (e: any) {
       console.error(e)
       setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
-      setSearchResult([])
+      setSearchResult({
+        items: [],
+        page,
+        pageSize: SEARCH_PAGE_SIZE,
+        total: 0,
+      })
     }
+  }
+
+  // 🔹 검색 버튼 클릭 시
+  const handleSearch = async (next: SearchFilters) => {
+    // 현재 필터를 저장해두고, 항상 1페이지부터 시작
+    setSearchFilters(next)
+    await runSearch(next, 1)
+  }
+
+  // 🔹 페이지 번호 클릭 시 (1,2,3...)
+  const handleChangeSearchPage = async (nextPage: number) => {
+    if (!searchFilters) return // 필터 정보가 없으면 수행 X
+    // 동일 페이지 눌렀을 때는 무시
+    if (searchResult && searchResult.page === nextPage) return
+
+    await runSearch(searchFilters, nextPage)
   }
 
   const renderEmptySearch = () => (
@@ -149,6 +199,37 @@ export default function HomePage() {
       필터를 바꾸거나 날짜를 다시 선택해 보세요.
     </div>
   )
+
+  // 🔹 페이지네이션 UI (검색 결과에만 사용)
+  const renderPagination = () => {
+    if (!searchResult) return null
+    const { total, pageSize, page } = searchResult
+    if (!total || total <= pageSize) return null
+
+    const totalPages = Math.ceil(total / pageSize)
+
+    // 너무 많으면 나중에 앞/뒤 ... 로 줄이는 것도 가능하지만
+    // 일단은 전체를 다 보여주는 단순한 게시판 스타일
+    const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+
+    return (
+      <div className="flex justify-center gap-2 py-6 text-sm">
+        {pages.map((p) => (
+          <button
+            key={p}
+            onClick={() => handleChangeSearchPage(p)}
+            className={`min-w-[32px] rounded-md border px-2 py-1 ${
+              p === page
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="bg-bg">
@@ -167,18 +248,24 @@ export default function HomePage() {
         {!isInitialLoading && !error && (
           <>
             {searchResult ? (
-              // 검색 결과 모드
-              searchResult.length === 0 ? (
+              // 🔹 검색 결과 모드
+              searchResult.items.length === 0 ? (
                 renderEmptySearch()
               ) : (
-                <GridSection
-                  title="검색 결과"
-                  items={searchResult}
-                  variant="grid"
-                  pageSize={12}
-                />
+                <>
+                  <GridSection
+                    title="검색 결과"
+                    items={searchResult.items}
+                    variant="grid"
+                    // 🔹 서버 페이지네이션 기준에 맞춰 15개
+                    pageSize={SEARCH_PAGE_SIZE}
+                  />
+                  {/* 🔹 게시판 스타일 페이지네이션 */}
+                  {renderPagination()}
+                </>
               )
             ) : homeBase ? (
+              // 🔹 기본 홈 화면 모드
               <>
                 <GridSection
                   title="새로 들어온 팝업스토어"
