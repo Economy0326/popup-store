@@ -62,54 +62,61 @@ export default function HomePage() {
     '0'
   )}`
 
-  // 로고에서 "/?reset=1"로 들어온 경우 검색 상태 초기화
+  // 공통으로 쓰는 홈 데이터 로더 함수
+  const loadHome = async () => {
+    try {
+      setInitialLoading(true)
+      setError(null)
+
+      const res = await fetchHomeInitial()
+
+      setHomeBase({
+        latest: res.latest ?? [],
+        popular: res.popular ?? [],
+      })
+
+      setMonthlyByMonth((prev) => ({
+        ...prev,
+        [initialMonthKey]: res.monthly ?? [],
+      }))
+
+      // 처음/리셋 시에는 보여주는 달도 현재 달
+      setDisplayMonthKey(initialMonthKey)
+    } catch (e: any) {
+      console.error(e)
+      setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
+    } finally {
+      setInitialLoading(false)
+    }
+  }
+
+  // 로고에서 "/?reset=1"로 들어온 경우: 검색 + 홈 데이터까지 완전 초기화
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const shouldReset = params.get('reset') === '1'
 
-    if (shouldReset) {
-      // 검색 관련 상태 초기화
-      setSearchResult(null)
-      setSearchFilters(null)
+    if (!shouldReset) return
 
-      // 월 선택도 현재 달로 초기화
-      setSelectedMonth(thisMonth)
-      setDisplayMonthKey(initialMonthKey)
-    }
-    // location.search 변경될 때마다 체크
-  }, [location.search, thisMonth, initialMonthKey])
+    // 검색 관련 상태 초기화
+    setSearchResult(null)
+    setSearchFilters(null)
+
+    // 월 선택도 현재 달로 초기화
+    setSelectedMonth(thisMonth)
+    setDisplayMonthKey(initialMonthKey)
+
+    // 홈 데이터도 다시 불러오기 (api/popups/home 재호출)
+    // 로고 = 항상 최신 홈 화면
+    loadHome()
+  }, [location.search])
 
   // 첫 진입: /api/popups/home (latest + popular + 이번 달 monthly)
   useEffect(() => {
-    const loadInitial = async () => {
-      try {
-        setInitialLoading(true)
-        setError(null)
-
-        const res = await fetchHomeInitial()
-
-        setHomeBase({
-          latest: res.latest ?? [],
-          popular: res.popular ?? [],
-        })
-
-        setMonthlyByMonth((prev) => ({
-          ...prev,
-          [initialMonthKey]: res.monthly ?? [],
-        }))
-
-        // 처음에는 보여주는 달도 현재 달
-        setDisplayMonthKey(initialMonthKey)
-      } catch (e: any) {
-        console.error(e)
-        setError(e.message ?? '알 수 없는 에러가 발생했습니다.')
-      } finally {
-        setInitialLoading(false)
-      }
+    // 이미 reset 효과에서 호출했다면, homeBase 가 null 이 아닐 수 있음
+    // 하지만 그냥 한 번 더 불러도 큰 문제는 없음.
+    if (!homeBase) {
+      loadHome()
     }
-
-    loadInitial()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // 의존성 빈배열 => 최초 1번만
 
   // 월 변경 시: 새 달 데이터를 백그라운드에서만 불러오기
@@ -118,7 +125,7 @@ export default function HomePage() {
     if (searchResult) return
     if (!homeBase) return
 
-    // 이미 캐시된 달이면 API 호출하지 말고 단순히 displayMonthKey만 현재 달로 바꿔준다.
+    // 이미 캐시된 달이면 API 호출하지 말고 단순히 displayMonthKey만 변경
     if (monthlyByMonth[currentMonthKey]) {
       setDisplayMonthKey(currentMonthKey)
       return
@@ -161,7 +168,7 @@ export default function HomePage() {
 
   const isInitialLoading = initialLoading && !homeBase && !searchResult
 
-  // 실제 검색 호출 로직을 함수로 분리 (초기 검색 + 페이지 이동 둘 다 여기 사용)
+  // 실제 검색 호출 로직 (초기 검색 + 페이지 이동 둘 다 여기 사용)
   const runSearch = async (filters: SearchFilters, page: number) => {
     try {
       setError(null)

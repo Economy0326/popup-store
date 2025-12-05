@@ -111,7 +111,7 @@ export default function Header() {
       {open && (
         <div className="md:hidden border-t border-slate-100 bg-white">
           <nav className="mx-auto max-w-6xl px-4 py-3 flex flex-col gap-6 text-md text-slate-800">
-            <Link to="/" className="py-1" onClick={() => setOpen(false)}>
+            <Link to="/?reset=1" className="py-1" onClick={() => setOpen(false)}>
               홈
             </Link>
             <Link

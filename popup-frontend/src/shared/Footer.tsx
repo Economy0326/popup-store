@@ -17,7 +17,7 @@ export default function Footer() {
               href="mailto:popfitup1234@gmail.com"
               className="underline-offset-2 hover:underline text-text"
             >
-              popfitup1234@gmail.com
+              wjdrudwo0575@naver.com
             </a>
           </p>
           <p>
