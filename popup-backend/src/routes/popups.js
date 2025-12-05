@@ -82,7 +82,7 @@ router.get('/', async (req, res) => {
       keyword,
       sort = 'LATEST',
       page = 1,
-      pageSize = 20
+      pageSize = 15
     } = req.query;
 
     // SQL 조건 동적 생성

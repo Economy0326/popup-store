@@ -13,7 +13,7 @@ export default function Header() {
       <div className="mx-auto max-w-6xl h-16 px-4 flex items-center justify-between">
         {/* 로고 */}
         <Link
-          to="/"
+          to="/?reset=1"
           className="flex items-center gap-1 text-2xl md:text-3xl font-extrabold tracking-tight"
         >
           <span className="text-slate-500">Pop</span>

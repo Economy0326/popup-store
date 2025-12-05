@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import HeroSection, { type SearchFilters } from '../components/HeroSection'
 import GridSection from '../components/GridSection'
 import MonthSelector from '../components/MonthSelector'
@@ -9,10 +10,10 @@ import {
   searchPopups,
 } from '../api/popups'
 
-// 🔹 검색 결과 페이지당 개수는 15개로 고정
+// 검색 결과 페이지당 개수는 15개로 고정
 const SEARCH_PAGE_SIZE = 15
 
-// 🔹 검색 결과 + 페이지 정보까지 함께 들고 있을 형태
+// 검색 결과 + 페이지 정보까지 함께 들고 있을 형태
 type SearchResultState = {
   items: PopupItem[]
   page: number
@@ -21,6 +22,8 @@ type SearchResultState = {
 } | null
 
 export default function HomePage() {
+  const location = useLocation()
+
   const now = new Date()
   const thisYear = now.getFullYear()
   const thisMonth = now.getMonth() + 1
@@ -44,10 +47,10 @@ export default function HomePage() {
   const [displayMonthKey, setDisplayMonthKey] =
     useState<string>(initialMonthKey)
 
-  // 🔹 검색 결과 전체(현재 페이지 아이템 + page/pageSize/total)
+  // 검색 결과 전체(현재 페이지 아이템 + page/pageSize/total)
   const [searchResult, setSearchResult] = useState<SearchResultState>(null)
 
-  // 🔹 어떤 필터로 검색 중인지 저장해두기 (페이지 이동 시 재사용)
+  // 어떤 필터로 검색 중인지 저장해두기 (페이지 이동 시 재사용)
   const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null)
 
   const [initialLoading, setInitialLoading] = useState(true)
@@ -58,6 +61,23 @@ export default function HomePage() {
     2,
     '0'
   )}`
+
+  // 로고에서 "/?reset=1"로 들어온 경우 검색 상태 초기화
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const shouldReset = params.get('reset') === '1'
+
+    if (shouldReset) {
+      // 검색 관련 상태 초기화
+      setSearchResult(null)
+      setSearchFilters(null)
+
+      // 월 선택도 현재 달로 초기화
+      setSelectedMonth(thisMonth)
+      setDisplayMonthKey(initialMonthKey)
+    }
+    // location.search 변경될 때마다 체크
+  }, [location.search, thisMonth, initialMonthKey])
 
   // 첫 진입: /api/popups/home (latest + popular + 이번 달 monthly)
   useEffect(() => {
@@ -98,8 +118,7 @@ export default function HomePage() {
     if (searchResult) return
     if (!homeBase) return
 
-    // 🔧 [버그 수정] 이미 캐시된 달이면 API 호출하지 말고
-    // 단순히 displayMonthKey만 현재 달로 바꿔준다.
+    // 이미 캐시된 달이면 API 호출하지 말고 단순히 displayMonthKey만 현재 달로 바꿔준다.
     if (monthlyByMonth[currentMonthKey]) {
       setDisplayMonthKey(currentMonthKey)
       return
@@ -142,7 +161,7 @@ export default function HomePage() {
 
   const isInitialLoading = initialLoading && !homeBase && !searchResult
 
-  // 🔹 실제 검색 호출 로직을 함수로 분리 (초기 검색 + 페이지 이동 둘 다 여기 사용)
+  // 실제 검색 호출 로직을 함수로 분리 (초기 검색 + 페이지 이동 둘 다 여기 사용)
   const runSearch = async (filters: SearchFilters, page: number) => {
     try {
       setError(null)
@@ -176,14 +195,14 @@ export default function HomePage() {
     }
   }
 
-  // 🔹 검색 버튼 클릭 시
+  // 검색 버튼 클릭 시
   const handleSearch = async (next: SearchFilters) => {
     // 현재 필터를 저장해두고, 항상 1페이지부터 시작
     setSearchFilters(next)
     await runSearch(next, 1)
   }
 
-  // 🔹 페이지 번호 클릭 시 (1,2,3...)
+  // 페이지 번호 클릭 시
   const handleChangeSearchPage = async (nextPage: number) => {
     if (!searchFilters) return // 필터 정보가 없으면 수행 X
     // 동일 페이지 눌렀을 때는 무시
@@ -200,7 +219,7 @@ export default function HomePage() {
     </div>
   )
 
-  // 🔹 페이지네이션 UI (검색 결과에만 사용)
+  // 페이지네이션 UI (검색 결과에만 사용)
   const renderPagination = () => {
     if (!searchResult) return null
     const { total, pageSize, page } = searchResult
@@ -208,7 +227,6 @@ export default function HomePage() {
 
     const totalPages = Math.ceil(total / pageSize)
 
-    // 너무 많으면 나중에 앞/뒤 ... 로 줄이는 것도 가능하지만
     // 일단은 전체를 다 보여주는 단순한 게시판 스타일
     const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
 
@@ -248,7 +266,7 @@ export default function HomePage() {
         {!isInitialLoading && !error && (
           <>
             {searchResult ? (
-              // 🔹 검색 결과 모드
+              // 검색 결과 모드
               searchResult.items.length === 0 ? (
                 renderEmptySearch()
               ) : (
@@ -257,15 +275,15 @@ export default function HomePage() {
                     title="검색 결과"
                     items={searchResult.items}
                     variant="grid"
-                    // 🔹 서버 페이지네이션 기준에 맞춰 15개
+                    // 서버 페이지네이션 기준에 맞춰 15개
                     pageSize={SEARCH_PAGE_SIZE}
                   />
-                  {/* 🔹 게시판 스타일 페이지네이션 */}
+                  {/* 게시판 스타일 페이지네이션 */}
                   {renderPagination()}
                 </>
               )
             ) : homeBase ? (
-              // 🔹 기본 홈 화면 모드
+              // 기본 홈 화면 모드
               <>
                 <GridSection
                   title="새로 들어온 팝업스토어"
