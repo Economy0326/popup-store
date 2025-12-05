@@ -62,7 +62,7 @@ export default function HomePage() {
     '0'
   )}`
 
-  // 공통으로 쓰는 홈 데이터 로더 함수
+  // 공통 홈 데이터 로더
   const loadHome = async () => {
     try {
       setInitialLoading(true)
@@ -80,7 +80,7 @@ export default function HomePage() {
         [initialMonthKey]: res.monthly ?? [],
       }))
 
-      // 처음/리셋 시에는 보여주는 달도 현재 달
+      // 보여주는 달도 현재 달로
       setDisplayMonthKey(initialMonthKey)
     } catch (e: any) {
       console.error(e)
@@ -90,10 +90,11 @@ export default function HomePage() {
     }
   }
 
-  // 로고에서 "/?reset=1"로 들어온 경우: 검색 + 홈 데이터까지 완전 초기화
+  // 로고에서 "/?reset=..."로 들어온 경우: 검색 상태 초기화 + 맨 위로 스크롤 + 홈 데이터 최신화
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    const shouldReset = params.get('reset') === '1'
+    // 값이 '1'이든 '123123'이든 상관 없이 reset 파라미터만 존재하면 리셋
+    const shouldReset = params.has('reset')
 
     if (!shouldReset) return
 
@@ -105,19 +106,19 @@ export default function HomePage() {
     setSelectedMonth(thisMonth)
     setDisplayMonthKey(initialMonthKey)
 
-    // 홈 데이터도 다시 불러오기 (api/popups/home 재호출)
-    // 로고 = 항상 최신 홈 화면
+    // 스크롤 맨 위로
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    // 홈 데이터 다시 불러오기
     loadHome()
   }, [location.search])
 
   // 첫 진입: /api/popups/home (latest + popular + 이번 달 monthly)
   useEffect(() => {
-    // 이미 reset 효과에서 호출했다면, homeBase 가 null 이 아닐 수 있음
-    // 하지만 그냥 한 번 더 불러도 큰 문제는 없음.
-    if (!homeBase) {
-      loadHome()
-    }
-  }, []) // 의존성 빈배열 => 최초 1번만
+    loadHome()
+  }, []) // 최초 1번만
 
   // 월 변경 시: 새 달 데이터를 백그라운드에서만 불러오기
   useEffect(() => {
@@ -125,7 +126,7 @@ export default function HomePage() {
     if (searchResult) return
     if (!homeBase) return
 
-    // 이미 캐시된 달이면 API 호출하지 말고 단순히 displayMonthKey만 변경
+    // 이미 캐시된 달이면 API 호출하지 말고 단순히 displayMonthKey만 현재 달로 바꿔준다.
     if (monthlyByMonth[currentMonthKey]) {
       setDisplayMonthKey(currentMonthKey)
       return
@@ -168,7 +169,7 @@ export default function HomePage() {
 
   const isInitialLoading = initialLoading && !homeBase && !searchResult
 
-  // 실제 검색 호출 로직 (초기 검색 + 페이지 이동 둘 다 여기 사용)
+  // 실제 검색 호출 로직을 함수로 분리 (초기 검색 + 페이지 이동 둘 다 여기 사용)
   const runSearch = async (filters: SearchFilters, page: number) => {
     try {
       setError(null)

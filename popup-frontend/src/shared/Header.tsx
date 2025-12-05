@@ -1,25 +1,33 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 export default function Header() {
   const [open, setOpen] = useState(false)
   const { user, loading, login, logout } = useAuth()
+  const navigate = useNavigate()
 
   const displayName = user?.nickname ?? '로그인 완료'
+
+  // 로고 / 홈 눌렀을 때: 항상 다른 reset 값으로 이동
+  const goHomeWithReset = () => {
+    const ts = Date.now().toString() // 매번 다른 값
+    navigate(`/?reset=${ts}`)
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-100">
       <div className="mx-auto max-w-6xl h-16 px-4 flex items-center justify-between">
         {/* 로고 */}
-        <Link
-          to="/?reset=1"
+        <button
+          type="button"
+          onClick={goHomeWithReset}
           className="flex items-center gap-1 text-2xl md:text-3xl font-extrabold tracking-tight"
         >
           <span className="text-slate-500">Pop</span>
           <span className="text-blue-500">Fit</span>
           <span className="text-slate-500">Up</span>
-        </Link>
+        </button>
 
         {/* 오른쪽: 아이콘 + 로그인 영역 */}
         <div className="flex items-center gap-2">
@@ -111,9 +119,18 @@ export default function Header() {
       {open && (
         <div className="md:hidden border-t border-slate-100 bg-white">
           <nav className="mx-auto max-w-6xl px-4 py-3 flex flex-col gap-6 text-md text-slate-800">
-            <Link to="/?reset=1" className="py-1" onClick={() => setOpen(false)}>
+            {/* 홈: reset 포함 */}
+            <button
+              type="button"
+              className="py-1 text-left"
+              onClick={() => {
+                goHomeWithReset()
+                setOpen(false)
+              }}
+            >
               홈
-            </Link>
+            </button>
+
             <Link
               to="/favorites"
               className="py-1"
@@ -129,7 +146,7 @@ export default function Header() {
               팝업 제보하기
             </Link>
 
-            {/* 모바일 로그인/로그아웃 버튼 – 네이버 이미지 사용 */}
+            {/* 모바일 로그인/로그아웃 */}
             {!loading && user ? (
               <button
                 onClick={async () => {
