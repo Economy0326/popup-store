@@ -108,10 +108,9 @@ router.get('/', async (req, res) => {
     const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
 
     // 정렬
-    let orderBy = 'ORDER BY popup_stores.updated_at DESC';
-    if (sort === 'POPULAR') orderBy = 'ORDER BY popup_stores.favorite_count DESC, popup_stores.weekly_view_count DESC';
-    if (sort === 'ENDING_SOON') orderBy = 'ORDER BY popup_stores.end_date ASC';
-
+   let orderBy = 'ORDER BY popup_stores.updated_at DESC, popup_stores.id DESC';
+    if (sort === 'POPULAR') orderBy = 'ORDER BY popup_stores.favorite_count DESC, popup_stores.weekly_view_count DESC, popup_stores.id DESC';
+    if (sort === 'ENDING_SOON') orderBy = 'ORDER BY popup_stores.end_date ASC, popup_stores.id ASC';
     // 페이징
     const offset = (parseInt(page) - 1) * parseInt(pageSize);
 
