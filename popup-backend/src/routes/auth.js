@@ -44,12 +44,18 @@ router.get('/naver/callback', async (req, res) => {
       });
       user = await findUserByUserId(profile.id);
     }
-    // 세션에 사용자 id만 저장
-      req.session.user = { id: user.id };
-      req.session.naverAccessToken = tokenData.access_token;
+	  // 세션에 사용자 id만 저장
+    req.session.user = { id: user.id };
+    req.session.naverAccessToken = tokenData.access_token;
 
-    // 로그인 성공 시 홈 화면으로 리다이렉트
-    res.redirect('/');
+    // 세션 저장 후 리다이렉트
+    req.session.save((err) => {
+      if (err) {
+        console.error('세션 저장 실패:', err);
+        return res.status(500).send('세션 저장 중 오류 발생');
+      }
+      res.redirect('/');
+    });
   } catch (err) {
     res.status(500).send('네이버 인증 처리 중 오류 발생: ' + err.message);
   }

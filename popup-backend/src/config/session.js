@@ -14,10 +14,11 @@ const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'your_secret',
   resave: false,
   saveUninitialized: false,
+  proxy: true, // Trust Proxy 설정 (필수)
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // 프로덕션에서만 HTTPS 강제
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 프로덕션에서는 크로스사이트 허용
+    secure: true, 
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 1일
   }
 });
