@@ -86,42 +86,191 @@
 
 ![AWS Architecture](docs/diagrams/architecture-aws.jpg)
 
-[ Client (Browser) ]
-↓ HTTPS
-[ Nginx (EC2 :443) ]
-↓ HTTP
-[ Node.js Backend (EC2 :3000) ]
-↓
-[ MySQL (RDS) ]
-
 ---
 
 ## 3️⃣ Backend 주요 기능
 
 ### 🌐 (1) 팝업스토어 데이터 제공 API
-- 네이버 지도 기반으로 수집된 팝업스토어 데이터 제공
-- 지역 / 날짜 / 카테고리 기반 필터링
-- 페이지네이션 기반 검색 결과 반환
 
-### 🗂️ (2) 카테고리 자동 분류
-- OpenAI API를 활용한 자동 카테고리 분류
-- 하나의 팝업에 복수 카테고리 허용
-- 프론트에서는 해시태그 형태로 표현
+시스템의 안정성과 확장성을 위해 **데이터 수집(ETL)** 과 **서비스(API)** 레이어를 분리하였습니다.
 
-### ⭐ (3) 인기 / 최신 팝업 기준
-- **인기 팝업**
-  - 즐겨찾기(찜) 수 기준
-  - 주간 조회수(weekly_view_count) 함께 활용
-- **새로 들어온 팝업**
-  - `updated_at` 기준 최신 순 정렬
-
-### ❤️ (4) 즐겨찾기(찜) 기능
-- 로그인 사용자 기준 즐겨찾기 등록 / 해제
-- 사용자별 즐겨찾기 목록 조회
-- 즐겨찾기 수는 DB 트리거를 통해 자동 관리
+복잡한 데이터 크롤링 및 가공은 **[PopFitUp Data Crawler](https://github.com/leehyeoklee/popup-store-crolling-app)** 리포지토리에서 전담하고, 구축된 DB를 기반으로 빠르고 효율적인 데이터 조회 서비스를 제공합니다.
 
 **ERD**
 ![ERD](docs/db/erd.png)
+
+### 🔍 (2) 상세 검색 및 필터링 시스템
+
+사용자가 원하는 정보를 정확하게 찾을 수 있도록 **지역, 날짜, 카테고리** 를 조합할 수 있는 **동적 쿼리(Dynamic Query)** 를 구현했습니다.
+각 조건은 `AND` 연산으로 결합되어 정교한 필터링이 가능합니다.
+
+* **복합 필터링:** 단일 조건뿐만 아니라 모든 조건을 교차 적용 가능
+* **지역(Region):** 주소 데이터의 특성을 고려하여, 포함 검색(`LIKE`)과 서브쿼리를 활용한 정밀 검색 지원
+* **날짜(Date):** 사용자가 선택한 날짜가 운영 기간(`start ~ end`) 내에 포함되는지 검사
+* **카테고리(Category):** 관계 테이블(`popup_categories`)을 조인하여 M:N 구조의 데이터 필터링 처리
+* **통합 검색:** 팝업스토어의 **이름, 설명, 주소** 전체를 대상으로 키워드 매칭
+
+```javascript
+// 동적 쿼리 생성을 위한 조건 배열 초기화
+let where = [];
+let params = [];
+
+// 1. 지역 필터링 (주소 기반 유연한 검색)
+if (region) {
+  where.push('popup_stores.id IN (SELECT id FROM popup_stores WHERE address LIKE ? OR EXISTS (SELECT 1 FROM (SELECT id, CONCAT(SUBSTRING_INDEX(address, " ", 2)) AS region_label FROM popup_stores) AS rl WHERE rl.region_label LIKE ? AND rl.id = popup_stores.id))');
+  params.push(`%${region}%`, `%${region}%`);
+}
+
+// 2. 날짜 필터링 (운영 기간 내 포함 여부 확인)
+if (date) {
+  where.push('popup_stores.start_date <= ? AND popup_stores.end_date >= ?');
+  params.push(date, date);
+}
+
+// 3. 카테고리 필터링 (다대다 관계 조인)
+if (category) {
+  const dbCategory = toEnglishCategory(category);
+  where.push('popup_stores.id IN (SELECT pc.popup_id FROM popup_categories pc JOIN categories c ON pc.category_id = c.id WHERE c.name = ?)');
+  params.push(dbCategory);
+}
+
+// 최종 WHERE 절 생성 (조건이 있을 경우에만 WHERE 추가)
+const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
+
+```
+
+### ⭐ (3) 최신 / 인기 / 월별 팝업 기준
+
+#### 새로 들어온 팝업 (New Arrivals)
+
+최근에 정보가 수정되거나 등록된(`updated_at`) 순서대로 정렬하여 최신 팝업을 우선 노출합니다.
+
+```javascript
+// 최신순 10개 조회
+db.promise().query('SELECT * FROM popup_stores ORDER BY updated_at DESC LIMIT 10');
+
+```
+
+#### 인기 팝업 (Trending)
+
+사용자들의 관심도 지표인 즐겨찾기(찜) 수를 1순위로, 주간 조회수를 2순위로 하여 복합 정렬합니다.
+
+```javascript
+// 찜(Favorites) 많은 순 -> 주간 조회수(Weekly View) 높은 순 정렬
+db.promise().query(`
+    SELECT * FROM popup_stores 
+    ORDER BY favorite_count DESC, weekly_view_count DESC 
+    LIMIT 10
+`);
+
+```
+
+#### 월별 팝업 (Monthly Schedule)
+
+특정 월(Month)에 운영 기간이 겹치는 모든 팝업스토어를 조회합니다.
+
+로직: (시작일 <= 해당 월 말일) AND (종료일 >= 해당 월 1일) 조건을 만족하는 데이터를 필터링합니다.
+
+```javascript
+// 파라미터: [해당 월 1일, 해당 월 1일]
+db.promise().query(
+  `SELECT * FROM popup_stores 
+   WHERE start_date <= LAST_DAY(?) AND end_date >= ? 
+   ORDER BY start_date DESC`,
+  [firstDay, firstDay]
+);
+
+```
+
+### 🤝 (4) 연관 팝업 추천 시스템
+
+사용자가 현재 보고 있는 팝업스토어와 관련성이 높은 콘텐츠를 추천합니다.
+
+**위치 기반**과 **취향(카테고리) 기반** 두 가지 추천 로직을 적용했습니다.
+
+#### 주변 팝업 추천 (Nearby Recommendations)
+
+현재 보고 있는 팝업스토어의 주소에서 **'구' 또는 '동' 단위(`regionLabel`)** 를 추출하여, 인근에서 열리는 다른 팝업스토어를 추천합니다.
+
+```javascript
+// 현재 팝업 제외하고 주소가 유사한 팝업 검색
+const [nearbyRows] = await db.promise().query(
+  `SELECT * FROM popup_stores 
+    WHERE id != ? AND (address LIKE ? OR CONCAT(SUBSTRING_INDEX(address, ' ', 2)) = ?) 
+    ORDER BY updated_at DESC LIMIT 12`,
+  [popupId, `%${regionLabel}%`, regionLabel]
+);
+
+```
+
+#### 비슷한 취향 추천 (Category-based Recommendations)
+
+현재 팝업스토어의 **카테고리(예: 패션, 음식 등)** 를 분석하여, 동일한 카테고리에 속하는 다른 팝업스토어를 추천합니다.
+
+`GROUP BY`를 사용하여 하나의 팝업이 여러 번 중복 추천되는 것을 방지합니다.
+
+```javascript
+const popupId = req.params.id;
+
+// 1. 기준 팝업의 카테고리 추출
+const [catRows] = await db.promise().query(
+  'SELECT c.name FROM categories c JOIN popup_categories pc ON c.id = pc.category_id WHERE pc.popup_id = ?', 
+  [popupId]
+);
+
+if (catRows.length === 0) {
+  return res.json({ items: [] }); // 카테고리가 없으면 추천 안 함
+}
+
+// 2. 모든 카테고리 기준으로 비슷한 팝업 추천 (IN 조건 활용)
+const categories = catRows.map(row => row.name);
+const placeholders = categories.map(() => '?').join(',');
+
+const query = `
+  SELECT ps.* FROM popup_stores ps
+  JOIN popup_categories pc ON ps.id = pc.popup_id
+  JOIN categories c ON pc.category_id = c.id
+  WHERE c.name IN (${placeholders}) AND ps.id != ?
+  GROUP BY ps.id
+  ORDER BY ps.updated_at DESC
+  LIMIT 12
+`;
+
+```
+
+### ❤️ (5) 즐겨찾기(찜) 기능
+
+로그인한 사용자가 관심 있는 팝업스토어를 저장하고 관리하는 개인화 기능입니다.
+
+#### 등록 및 해제 (Toggle)
+
+**등록:** `INSERT IGNORE` 구문을 사용하여, 중복 클릭 시에도 에러 없이 안전하게 데이터가 저장되도록 처리합니다.
+
+```javascript
+// 찜 등록 (중복 방지)
+await db.promise().query(
+  'INSERT IGNORE INTO favorites (user_id, popup_id) VALUES (?, ?)', 
+  [userId, popupId]
+);
+
+```
+
+**해제:** `DELETE` 구문을 사용하여 즐겨찾기 상태를 제거합니다.
+
+```javascript
+// 찜 해제
+await db.promise().query(
+  'DELETE FROM favorites WHERE user_id = ? AND popup_id = ?', 
+  [userId, popupId]
+);
+
+```
+
+#### ⚙️ 카운트 자동 관리 (Automation)
+
+애플리케이션 레벨에서 카운트를 별도로 수정하지 않습니다.
+
+**MySQL 트리거(Trigger)** 가 `favorites` 테이블의 `INSERT/DELETE` 이벤트를 감지하여 `popup_stores.favorite_count`를 실시간으로 자동 동기화합니다.
 
 ---
 
