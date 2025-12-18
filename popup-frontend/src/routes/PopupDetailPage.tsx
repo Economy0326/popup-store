@@ -164,6 +164,7 @@ export default function PopupDetailPage() {
             <button
               onClick={() => toggleFavorite(Number(popup.id))}
               className={`mt-1 px-3 py-1.5 rounded-full text-xs font-medium border flex items-center gap-1 transition
+                          focus:outline-none focus-visible:outline-none
                 ${
                   favored
                     ? 'bg-red-500 text-white border-red-500'
