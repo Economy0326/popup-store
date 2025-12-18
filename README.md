@@ -8,12 +8,14 @@
 
 ## 📌 Table of Contents
 - 프로젝트 개요
+- 서비스 주요 화면
 - 전체 아키텍처
 - Backend 주요 기능
 - Frontend 주요 기능
-- 기술 스택
 - 인증 및 보안
 - 관리자 기능
+- API 요약
+- 환경변수 설정
 - 기타 구현 포인트
 
 ---
@@ -27,80 +29,125 @@
 
 ---
 
+## 🖼️ 서비스 주요 화면
+
+### 🏠 홈 / 검색
+- 지역 · 날짜 · 카테고리 기반 검색
+- 최신 / 인기 / 월별 팝업 탐색
+
+![Home](docs/screens/home.PNG)
+![Search](docs/screens/search.PNG)
+
+---
+
+### 📍 팝업 상세 페이지
+- 대표 이미지 기반 상세 정보
+- 카테고리 / 지역 태그 시각화
+- 네이버 지도 기반 위치 표시
+- 비슷한 카테고리 / 주변 지역 팝업 추천
+
+**① 기본 정보 & 대표 이미지**
+![Detail Main](docs/screens/detail1.PNG)
+
+**② 지도 기반 위치 정보**
+![Detail Map](docs/screens/detail2.PNG)
+
+**③ 카테고리 / 지역 맞춤 추천**
+![Detail Recommendation](docs/screens/detail3.PNG)
+
+---
+
+### ❤️ 즐겨찾기
+- 로그인 사용자 전용
+- 지도 마커 + 리스트 동기화
+- 마커 클릭 → 카드 자동 스크롤
+
+![Favorites](docs/screens/favorite.PNG)
+
+---
+
+### 📝 팝업 제보
+- 로그인 사용자만 제보 가능
+- 내 제보 목록 / 삭제 지원
+
+![Report](docs/screens/report.PNG)
+
+---
+
+### 🛠️ 관리자 페이지
+- 관리자 키 기반 접근 제어
+- 제보 목록 조회 / 답변 등록 / 삭제
+
+![Admin](docs/screens/admin.PNG)
+
+---
+
 ## 2️⃣ 전체 아키텍처 (Architecture Overview)
-```
+
+![AWS Architecture](docs/diagrams/architecture-aws.jpg)
+
 [ Client (Browser) ]
-      ↓ HTTPS
+↓ HTTPS
 [ Nginx (EC2 :443) ]
-      ↓ HTTP
+↓ HTTP
 [ Node.js Backend (EC2 :3000) ]
-      ↓
-[ MySQL ]
-```
+↓
+[ MySQL (RDS) ]
 
 ---
 
 ## 3️⃣ Backend 주요 기능
 
 ### 🌐 3.1 팝업스토어 데이터 제공 API
-- 네이버 지도 기반으로 수집된 팝업스토어 데이터를 API 형태로 제공
-- 지역 / 날짜 / 카테고리 기반 필터링 지원
+- 네이버 지도 기반으로 수집된 팝업스토어 데이터 제공
+- 지역 / 날짜 / 카테고리 기반 필터링
 - 페이지네이션 기반 검색 결과 반환
 
 ### 🗂️ 3.2 카테고리 자동 분류
-- OpenAI API를 활용해 팝업스토어 정보를 자동 카테고리 분류
+- OpenAI API를 활용한 자동 카테고리 분류
 - 하나의 팝업에 복수 카테고리 허용
 - 프론트에서는 해시태그 형태로 표현
 
 ### ⭐ 3.3 인기 / 최신 팝업 기준
 - **인기 팝업**
   - 즐겨찾기(찜) 수 기준
-  - 조회수(weekly view count) 함께 활용
+  - 주간 조회수(weekly_view_count) 함께 활용
 - **새로 들어온 팝업**
   - `updated_at` 기준 최신 순 정렬
 
 ### ❤️ 3.4 즐겨찾기(찜) 기능
 - 로그인 사용자 기준 즐겨찾기 등록 / 해제
-- 사용자별 즐겨찾기 목록 조회 API 제공
+- 사용자별 즐겨찾기 목록 조회
 - 즐겨찾기 수는 DB 트리거를 통해 자동 관리
 
-### 📝 3.5 팝업 제보 기능
-- 로그인 사용자만 팝업스토어 제보 가능
-- 제보 등록 / 내 제보 목록 조회 / 삭제 기능 제공
+**ERD**
+![ERD](docs/db/erd.png)
 
 ---
 
 ## 4️⃣ Frontend 주요 기능
 
 ### 🏠 4.1 메인 화면(UI & 검색)
-- 지역 / 날짜 / 카테고리 입력 UI 제공
-- 입력값 기반으로 백엔드 검색 API 요청
-- 검색 결과를 카드 그리드 형태로 표시
+- 지역 / 날짜 / 카테고리 입력 UI
+- URL 기반 검색 상태 유지
 - 검색 결과 페이지네이션 지원
 
 ### 🧭 4.2 홈 화면 탐색 섹션
 - 새로 들어온 팝업
 - 인기 있는 팝업
-- 월별 팝업(월 선택 UI 제공)
-- 가로 캐러셀 및 그리드 레이아웃 지원
+- 월별 팝업 (월 선택 UI)
+- 캐러셀 / 그리드 레이아웃 지원
 
-### ❤️ 4.3 즐겨찾기 페이지
-- 로그인 사용자 전용 페이지
-- 즐겨찾기한 팝업 리스트 표시
-- 좌표가 있는 팝업은 네이버 지도에 마커로 표시
-- 마커 클릭 → 말풍선 표시
-- 말풍선 클릭 → 해당 카드로 스크롤 및 포커싱 처리
-
-### 📍 4.4 팝업 상세 페이지
-- 팝업스토어 상세 정보 표시
-- 카테고리를 해시태그 형태로 시각화
+### 📍 4.3 상세 페이지
+- 팝업 상세 정보 제공
+- 카테고리 / 지역 태그 시각화
 - 네이버 지도 기반 위치 표시
-- 비슷한 카테고리 / 주변 지역 팝업 추천
+- 비슷한 팝업 추천
 
-### 📝 4.5 제보 / 운영자 UI
-- 제보 등록 / 내 제보 목록
+### 📝 4.4 제보 / 운영자 UI
+- 팝업 제보 등록
+- 내 제보 목록 확인
 - 운영자 답변 확인
-- 운영자 페이지 별도 제공
 
 ---
 
@@ -110,35 +157,67 @@
 - HTTPS 환경에서만 쿠키 동작
 - Nginx SSL Termination 적용
 
----
+### 🔐 인증 플로우 (Naver OAuth + Session Cookie)
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant F as Frontend (Vite)
+  participant N as Backend (Node/Express)
+  participant O as Naver OAuth
+
+  B->>F: 서비스 접속
+  B->>N: GET /auth/naver
+  N->>O: Redirect to Naver Login
+  O-->>B: Redirect back with code
+  B->>N: GET /auth/naver/callback
+  N->>O: access token 요청
+  O-->>N: user info
+  N-->>B: Set-Cookie(session)
+  B->>N: GET /api/users/me
+  N-->>B: user JSON or 401
+```
 
 ## 6️⃣ 관리자 기능 (Admin)
-- 관리자 전용 페이지 제공
-- 유효한 관리자 키 입력 시 접근 가능
-- 제보 목록 조회 / 답변 등록 / 삭제
+- 관리자 키 기반 접근 제어
+- 제보 목록 조회
+- 답변 등록 (1회 제한)
+- 제보 삭제
 
----
+## 7️⃣ API 요약
 
-## 7️⃣ 기술 스택 (Tech Stack)
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/api/popups/home` | 홈 데이터 (latest, popular, monthly) |
+| GET | `/api/popups` | 팝업 검색 |
+| GET | `/api/popups/:id` | 팝업 상세 |
+| POST | `/api/favorites` | 즐겨찾기 추가 |
+| DELETE | `/api/favorites/:id` | 즐겨찾기 삭제 |
+| POST | `/api/reports` | 팝업 제보 |
+| GET | `/api/reports/mine` | 내 제보 목록 |
 
-### Backend
-- Node.js
-- Express
-- MySQL
-- Nginx
-- OpenAI API
-- Naver OAuth
+## 8️⃣ 환경변수 설정
+```
+Frontend (.env)
+VITE_API_URL=https://api.popfitup.com
 
-### Frontend
-- React
-- TypeScript
-- React Router
-- Tailwind CSS
-- Naver Map SDK
+Backend (.env)
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=****
+DB_NAME=popup_db
+NAVER_CLIENT_ID=****
+NAVER_REDIRECT_URI=****
+NAVER CLIENT_SECRET=****
+NAVER_STATE=****
+NODE_ENV=development
+SESSION_SECRET=****
+REPORT_ADMIN_KEY=****
+PORT=5173
+```
 
----
-
-## 8️⃣ 기타 구현 포인트
-- 지도 SDK 로딩 안정성 처리
-- 비동기 요청 에러 / 로딩 상태 분기
-- 로그인 필요 기능 공통 처리
+## 9️⃣ 기타 구현 포인트
+- 지도 SDK 비동기 로딩 안정성 처리
+- 로그인 필요 기능 공통 컴포넌트 처리
+- 즐겨찾기 / 검색 상태 URL 동기화
+- 에러 / 로딩 상태 UX 분기 처리
