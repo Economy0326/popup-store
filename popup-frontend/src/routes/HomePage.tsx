@@ -89,7 +89,9 @@ export default function HomePage() {
     const category = p.get('category') ?? '전체'
     const page = Number(p.get('page') ?? '1')
 
-    const hasSearch = p.has('region') || p.has('date') || p.has('category')
+    const mode = p.get('mode')
+    const hasSearch =
+      mode === 'search' || p.has('region') || p.has('date') || p.has('category')
 
     return {
       hasSearch,
@@ -247,6 +249,8 @@ export default function HomePage() {
     if (region !== '' && region !== '전체') p.set('region', region)
     if (next.date) p.set('date', next.date)
     if (next.category !== '전체') p.set('category', next.category)
+
+    p.set('mode', 'search')
 
     p.set('page', '1')
     navigate(`/?${p.toString()}`)
