@@ -12,10 +12,10 @@ const sessionStore = new MySQLStore({
 
 const sessionMiddleware = session({
   store: sessionStore,
-  secret: process.env.SESSION_SECRET || 'your_secret',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  proxy: true, // Trust Proxy 설정 (필수)
+  proxy: true,
   cookie: {
     httpOnly: true,
     secure: true, 
