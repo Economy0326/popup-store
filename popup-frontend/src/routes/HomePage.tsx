@@ -4,11 +4,7 @@ import HeroSection, { type SearchFilters } from '../components/HeroSection'
 import GridSection from '../components/GridSection'
 import MonthSelector from '../components/MonthSelector'
 import type { PopupItem } from '../types/popup'
-import {
-  fetchHomeInitial,
-  fetchHomeMonthly,
-  searchPopups,
-} from '../api/popups'
+import { fetchHomeInitial, fetchHomeMonthly, searchPopups } from '../api/popups'
 
 // 검색 결과 페이지당 개수는 15개로 고정
 const SEARCH_PAGE_SIZE = 15
@@ -33,7 +29,7 @@ export default function HomePage() {
   // 유저가 선택한 달 (UI용)
   const [selectedMonth, setSelectedMonth] = useState(thisMonth)
 
-  // 검색 로딩 상태 
+  // 검색 로딩 상태
   const [searchLoading, setSearchLoading] = useState(false)
 
   // latest / popular 는 공통
@@ -43,13 +39,10 @@ export default function HomePage() {
   } | null>(null)
 
   // month → monthly 캐시
-  const [monthlyByMonth, setMonthlyByMonth] = useState<
-    Record<string, PopupItem[]>
-  >({})
+  const [monthlyByMonth, setMonthlyByMonth] = useState<Record<string, PopupItem[]>>({})
 
   // 실제로 화면에 보여주는 month key
-  const [displayMonthKey, setDisplayMonthKey] =
-    useState<string>(initialMonthKey)
+  const [displayMonthKey, setDisplayMonthKey] = useState<string>(initialMonthKey)
 
   // 검색 결과 전체
   const [searchResult, setSearchResult] = useState<SearchResultState>(null)
@@ -66,10 +59,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null)
 
   // 현재 선택된 키 (데이터 요청용)
-  const currentMonthKey = `${thisYear}-${String(selectedMonth).padStart(
-    2,
-    '0'
-  )}`
+  const currentMonthKey = `${thisYear}-${String(selectedMonth).padStart(2, '0')}`
 
   // 검색 상태 url 파싱
   const readQuery = () => {
@@ -131,7 +121,8 @@ export default function HomePage() {
   // 첫 진입: /api/popups/home (latest + popular + 이번 달 monthly)
   useEffect(() => {
     loadHome()
-  }, []) // 최초 1번만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 월 변경 시: 새 달 데이터를 백그라운드에서만 불러오기
   useEffect(() => {
@@ -217,7 +208,6 @@ export default function HomePage() {
     }
   }
 
-
   // URL 바뀔 때마다: 검색 모드면 검색 실행 / 아니면 홈 모드
   useEffect(() => {
     const { hasSearch, filters, page } = readQuery()
@@ -239,6 +229,7 @@ export default function HomePage() {
     }
 
     runSearch(filters, page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search])
 
   // 검색 버튼 클릭 시 -> URL 변경
@@ -250,6 +241,7 @@ export default function HomePage() {
     if (next.date) p.set('date', next.date)
     if (next.category !== '전체') p.set('category', next.category)
 
+    // “빈 값으로 검색 눌러도” 검색모드 진입시키기 위해 mode를 강제로 붙임
     p.set('mode', 'search')
 
     p.set('page', '1')
@@ -278,23 +270,119 @@ export default function HomePage() {
     if (!total || total <= pageSize) return null
 
     const totalPages = Math.ceil(total / pageSize)
-    const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+    const current = page
+
+    // 보여줄 “중간 페이지” 최대 개수 (1, 마지막 제외)
+    const MAX_MIDDLE = 6
+
+    const clamp = (n: number, min: number, max: number) =>
+      Math.max(min, Math.min(max, n))
+
+    // middle 범위 계산
+    let start = current - Math.floor(MAX_MIDDLE / 2)
+    let end = start + MAX_MIDDLE - 1
+
+    // middle은 2 ~ totalPages-1 사이만 가능
+    start = clamp(start, 2, Math.max(2, totalPages - 1))
+    end = clamp(end, 2, totalPages - 1)
+
+    // 길이 맞추기 (totalPages가 작을 때)
+    const middleCount = end - start + 1
+    if (middleCount < MAX_MIDDLE) {
+      end = clamp(end + (MAX_MIDDLE - middleCount), 2, totalPages - 1)
+      start = clamp(start - (MAX_MIDDLE - (end - start + 1)), 2, totalPages - 1)
+    }
+
+    const middlePages: number[] = []
+    for (let i = start; i <= end; i++) middlePages.push(i)
+
+    const showLeftDots = start > 2
+    const showRightDots = end < totalPages - 1
+
+    const goTo = (p: number) => {
+      if (p < 1 || p > totalPages) return
+      handleChangeSearchPage(p)
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    }
 
     return (
-      <div className="flex justify-center gap-2 py-6 text-sm">
-        {pages.map((p) => (
+      <div className="flex justify-center py-6">
+        <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+          {/* Prev */}
           <button
-            key={p}
-            onClick={() => handleChangeSearchPage(p)}
-            className={`min-w-[32px] rounded-md border px-2 py-1 ${
-              p === page
+            onClick={() => goTo(current - 1)}
+            disabled={current === 1}
+            className={`px-3 py-1 rounded-md border ${
+              current === 1
+                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            Prev
+          </button>
+
+          {/* 1 */}
+          <button
+            onClick={() => goTo(1)}
+            className={`min-w-[36px] px-3 py-1 rounded-md border ${
+              current === 1
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            {p}
+            1
           </button>
-        ))}
+
+          {/* left ... */}
+          {showLeftDots && <span className="px-2 text-slate-400 select-none">…</span>}
+
+          {/* middle */}
+          {middlePages.map((p) => (
+            <button
+              key={p}
+              onClick={() => goTo(p)}
+              className={`min-w-[36px] px-3 py-1 rounded-md border ${
+                p === current
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+
+          {/* right ... */}
+          {showRightDots && <span className="px-2 text-slate-400 select-none">…</span>}
+
+          {/* last */}
+          {totalPages > 1 && (
+            <button
+              onClick={() => goTo(totalPages)}
+              className={`min-w-[36px] px-3 py-1 rounded-md border ${
+                current === totalPages
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {totalPages}
+            </button>
+          )}
+
+          {/* Next */}
+          <button
+            onClick={() => goTo(current + 1)}
+            disabled={current === totalPages}
+            className={`px-3 py-1 rounded-md border ${
+              current === totalPages
+                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            Next
+          </button>
+        </div>
       </div>
     )
   }
@@ -315,9 +403,7 @@ export default function HomePage() {
           </p>
         )}
 
-        {error && (
-          <p className="text-center text-sm text-red-500">{error}</p>
-        )}
+        {error && <p className="text-center text-sm text-red-500">{error}</p>}
 
         {!isInitialLoading && !error && (
           <>
@@ -350,7 +436,7 @@ export default function HomePage() {
                   title="인기 있는 팝업스토어"
                   items={homeBase.popular}
                   loading={initialLoading}
-                  skeletonCount={6} 
+                  skeletonCount={6}
                 />
                 <GridSection
                   title={`${selectedMonth}월 팝업스토어`}
@@ -358,10 +444,7 @@ export default function HomePage() {
                   loading={initialLoading}
                   skeletonCount={6}
                   rightSlot={
-                    <MonthSelector
-                      selected={selectedMonth}
-                      onChange={setSelectedMonth}
-                    />
+                    <MonthSelector selected={selectedMonth} onChange={setSelectedMonth} />
                   }
                 />
               </>
