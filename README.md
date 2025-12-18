@@ -4,7 +4,7 @@
 > 네이버 지도/로컬 검색 결과를 기반으로 수집된 팝업스토어 데이터를 활용하여  
 > **검색 · 탐색 · 즐겨찾기 · 제보** 기능을 제공하는 웹 서비스입니다.
 
-#### 🚀 서비스 배포 현황 (Deployment Status)
+### 🚀 서비스 배포 현황 (Deployment Status)
 
 | 서비스명 | URL | 상태 |
 | :--- | :--- | :--- |
@@ -414,3 +414,9 @@ PORT=5173
 - 로그인 필요 기능 공통 컴포넌트 처리
 - 즐겨찾기 / 검색 상태 URL 동기화
 - 에러 / 로딩 상태 UX 분기 처리
+
+## 🔟 데모 시연 영상 (Demo Video)
+
+아래 이미지를 클릭하면 유튜브 영상으로 이동합니다.
+
+[![PopFitUp Demo](https://img.youtube.com/vi/cRrZcI5YlVA/0.jpg)](https://youtu.be/cRrZcI5YlVA)
