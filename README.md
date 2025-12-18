@@ -312,11 +312,38 @@ await db.promise().query(
 
 ---
 
-## 5️⃣ 인증 및 보안
-- 네이버 OAuth 기반 소셜 로그인
-- 세션/쿠키 기반 인증
-- HTTPS 환경에서만 쿠키 동작
-- Nginx SSL Termination 적용
+### 5️⃣ 🔐 인증 및 보안 아키텍처 (Security & Auth)
+
+**네이버 소셜 로그인 (OAuth 2.0)**
+
+* 네이버 OAuth 2.0을 이용해 사용자가 네이버 계정으로 간편하게 로그인할 수 있도록 구현했습니다. 
+* 사용자는 네이버 인증을 거쳐 서비스에 로그인하며, 인증 후 서버에서 사용자 정보를 받아 세션에 저장합니다.
+
+**세션/쿠키 기반 로그인**
+
+* 로그인 성공 시 서버는 세션 정보를 MySQL에 저장하고, 세션 ID를 쿠키로 클라이언트에 전달합니다. 
+* 세션 쿠키는 보안을 위해 HttpOnly, Secure, SameSite 옵션을 설정했습니다.
+```javascript
+session({
+  store: sessionStore,                 // 세션 데이터를 DB에 저장
+  secret: process.env.SESSION_SECRET,  // 세션 ID를 암호화할 때 사용하는 비밀키
+  resave: false,                       // 변경 사항이 없는 세션은 다시 저장하지 않아 성능을 최적화
+  saveUninitialized: false,            // 로그인하지 않은 세션은 저장 X
+  proxy: true,                         // Nginx(프록시) 뒤에서도 HTTPS 설정을 인식하도록 신뢰
+  cookie: {
+    httpOnly: true,                    // 자바스크립트로 쿠키에 접근하지 못하게 막아 해킹(XSS)을 방지
+    secure: true,                      // HTTPS 보안 연결에서만 쿠키를 전송
+    sameSite: 'lax',                   // 외부 사이트 요청을 막되(CSRF 방지), 링크 이동 시에는 로그인을 유지
+    maxAge: 60 * 60 * 1000             // 로그인 유지 시간을 1시간으로 설정
+  }
+});
+```
+
+**Nginx 리버스 프록시 & HTTPS 암호화**
+
+* Nginx를 리버스 프록시로 두고, SSL 인증서를 적용하여 모든 트래픽을 HTTPS로 암호화합니다. 
+* Nginx에서 Https(443)로 요청을 받아 백엔드(3000)로 전달하며, 이를 통해 사용자 데이터와 인증 정보가 안전하게 보호됩니다.
+
 
 ### 🔐 인증 플로우 (Naver OAuth + Session Cookie)
 
