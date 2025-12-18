@@ -133,75 +133,83 @@ export default function ReportsAdminPage() {
 
         {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
 
-        <div className="bg-card border border-line rounded-xl2 overflow-hidden">
+        {/* 작은 화면에서 잘리지 않게 가로 스크롤 허용 */}
+        <div className="bg-card border border-line rounded-xl2 overflow-x-auto">
           {reports.length === 0 ? (
             <div className="p-4 text-sm text-textMuted">
               제보 내역이 없습니다.
             </div>
           ) : (
-            <table className="w-full text-xs sm:text-sm align-top">
+            <table className="min-w-[860px] w-full text-xs sm:text-sm align-top">
               <thead className="bg-slate-50">
                 <tr className="text-left">
                   <th className="px-3 py-2 w-12">ID</th>
                   <th className="px-3 py-2">이름</th>
                   <th className="px-3 py-2">주소</th>
                   <th className="px-3 py-2">제보 내용</th>
-                  <th className="px-3 py-2 w-80">운영자 답변</th>
+                  <th className="px-3 py-2 w-[360px]">운영자 답변</th>
                 </tr>
               </thead>
               <tbody>
-                {reports.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="border-t border-line/60 align-top"
-                  >
-                    <td className="px-3 py-2">{r.id}</td>
-                    <td className="px-3 py-2">{r.name}</td>
-                    <td className="px-3 py-2">{r.address}</td>
-                    <td className="px-3 py-2 whitespace-pre-line">
-                      {r.description}
-                      <div className="mt-1 text-[11px] text-textMuted">
-                        {new Date(r.createdAt).toLocaleString()}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <textarea
-                        className="w-full h-20 border border-line rounded-md px-2 py-1 text-xs"
-                        value={answers[r.id] ?? r.answer ?? ''}
-                        onChange={(e) =>
-                          handleChangeAnswer(r.id, e.target.value)
-                        }
-                        placeholder="해당 제보에 대한 답변을 입력해 주세요."
-                        disabled={!!r.answer} // 이미 답변 있으면 수정 불가
-                      />
-                      <div className="mt-1 flex items-center justify-between gap-2">
-                        <span className="text-[11px] text-textMuted">
-                          {r.answeredAt
-                            ? `답변 시간: ${new Date(
-                                r.answeredAt
-                              ).toLocaleString()}`
-                            : '아직 답변 없음'}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleSaveAnswer(r)}
-                            disabled={!!r.answer || savingId === r.id}
-                            className="px-3 py-1 rounded-full bg-green-600 text-white text-[11px] hover:bg-green-700 disabled:opacity-60"
-                          >
-                            {savingId === r.id ? '저장 중...' : '답변 저장'}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAdmin(r)}
-                            disabled={deletingId === r.id}
-                            className="px-3 py-1 rounded-full bg-red-500 text-white text-[11px] hover:bg-red-600 disabled:opacity-60"
-                          >
-                            {deletingId === r.id ? '삭제 중...' : '삭제'}
-                          </button>
+                {reports.map((r) => {
+                  const isAnswered = !!r.answer
+                  const isSaving = savingId === r.id
+                  const isDeleting = deletingId === r.id
+
+                  return (
+                    <tr key={r.id} className="border-t border-line/60 align-top">
+                      <td className="px-3 py-2">{r.id}</td>
+                      <td className="px-3 py-2">{r.name}</td>
+                      <td className="px-3 py-2">{r.address}</td>
+                      <td className="px-3 py-2 whitespace-pre-line">
+                        {r.description}
+                        <div className="mt-1 text-[11px] text-textMuted">
+                          {new Date(r.createdAt).toLocaleString()}
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      {/* 답변 칸: textarea 위, 상태+버튼 아래(줄바꿈/안잘림) */}
+                      <td className="px-3 py-2">
+                        <textarea
+                          className="w-full min-h-[84px] border border-line rounded-lg px-3 py-2 text-xs sm:text-sm
+                                     focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                          value={answers[r.id] ?? r.answer ?? ''}
+                          onChange={(e) => handleChangeAnswer(r.id, e.target.value)}
+                          placeholder="해당 제보에 대한 답변을 입력해 주세요."
+                          disabled={isAnswered}
+                        />
+
+                        <div className="mt-2 flex flex-col gap-2">
+                          <span className="text-[11px] text-textMuted">
+                            {r.answeredAt
+                              ? `답변 시간: ${new Date(r.answeredAt).toLocaleString()}`
+                              : '아직 답변 없음'}
+                          </span>
+
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <button
+                              onClick={() => handleSaveAnswer(r)}
+                              disabled={isAnswered || isSaving}
+                              className="px-3 py-1.5 rounded-full bg-green-600 text-white text-[11px] sm:text-xs
+                                         hover:bg-green-700 disabled:opacity-60"
+                            >
+                              {isSaving ? '저장 중...' : '답변 저장'}
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteAdmin(r)}
+                              disabled={isDeleting}
+                              className="px-3 py-1.5 rounded-full bg-red-500 text-white text-[11px] sm:text-xs
+                                         hover:bg-red-600 disabled:opacity-60"
+                            >
+                              {isDeleting ? '삭제 중...' : '삭제'}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           )}

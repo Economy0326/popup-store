@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PopupItem } from '../types/popup'
 import PopupCard from './PopupCard'
+import PopupCardSkeleton from './PopupCardSkeleton'
 
 type GridSectionProps = {
   title: string
@@ -8,6 +9,9 @@ type GridSectionProps = {
   variant?: 'carousel' | 'grid'
   pageSize?: number
   rightSlot?: React.ReactNode
+  loading?: boolean
+  skeletonCount?: number
+  gridClassName?: string
 }
 
 export default function GridSection({
@@ -16,6 +20,9 @@ export default function GridSection({
   variant = 'carousel',
   pageSize,
   rightSlot,
+  loading = false,
+  skeletonCount = 6,
+  gridClassName,
 }: GridSectionProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [showArrows, setShowArrows] = useState(false)
@@ -118,10 +125,19 @@ export default function GridSection({
         </div>
       ) : (
         // 3 x N 그리드
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-8">
-          {visibleItems.map((it) => (
-            <PopupCard key={it.id} item={it} />
-          ))}
+        <div
+          className={
+            gridClassName ??
+            'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-8'
+          }
+        >
+          {loading
+            ? Array.from({ length: skeletonCount }).map((_, i) => (
+                <PopupCardSkeleton key={i} />
+              ))
+            : visibleItems.map((it) => (
+                <PopupCard key={it.id} item={it} />
+              ))}
         </div>
       )}
 

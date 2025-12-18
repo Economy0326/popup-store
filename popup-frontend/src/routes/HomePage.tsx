@@ -1,14 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import HeroSection, { type SearchFilters } from '../components/HeroSection'
 import GridSection from '../components/GridSection'
 import MonthSelector from '../components/MonthSelector'
 import type { PopupItem } from '../types/popup'
-import {
-  fetchHomeInitial,
-  fetchHomeMonthly,
-  searchPopups,
-} from '../api/popups'
+import { fetchHomeInitial, fetchHomeMonthly, searchPopups } from '../api/popups'
 
 // 검색 결과 페이지당 개수는 15개로 고정
 const SEARCH_PAGE_SIZE = 15
@@ -22,6 +18,7 @@ type SearchResultState = {
 } | null
 
 export default function HomePage() {
+  const navigate = useNavigate()
   const location = useLocation()
 
   const now = new Date()
@@ -32,6 +29,9 @@ export default function HomePage() {
   // 유저가 선택한 달 (UI용)
   const [selectedMonth, setSelectedMonth] = useState(thisMonth)
 
+  // 검색 로딩 상태
+  const [searchLoading, setSearchLoading] = useState(false)
+
   // latest / popular 는 공통
   const [homeBase, setHomeBase] = useState<{
     latest: PopupItem[]
@@ -39,28 +39,56 @@ export default function HomePage() {
   } | null>(null)
 
   // month → monthly 캐시
-  const [monthlyByMonth, setMonthlyByMonth] = useState<
-    Record<string, PopupItem[]>
-  >({})
+  const [monthlyByMonth, setMonthlyByMonth] = useState<Record<string, PopupItem[]>>({})
 
   // 실제로 화면에 보여주는 month key
-  const [displayMonthKey, setDisplayMonthKey] =
-    useState<string>(initialMonthKey)
+  const [displayMonthKey, setDisplayMonthKey] = useState<string>(initialMonthKey)
 
-  // 검색 결과 전체(현재 페이지 아이템 + page/pageSize/total)
+  // 검색 결과 전체
   const [searchResult, setSearchResult] = useState<SearchResultState>(null)
 
-  // 어떤 필터로 검색 중인지 저장해두기 (페이지 이동 시 재사용)
-  const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null)
+  // HeroSection UI 필터 (URL과 동기화)
+  const [uiFilters, setUiFilters] = useState<SearchFilters>({
+    location: '전체',
+    date: '',
+    category: '전체',
+  })
 
+  // 초기 로딩 및 에러 상태
   const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // 현재 선택된 키 (데이터 요청용)
-  const currentMonthKey = `${thisYear}-${String(selectedMonth).padStart(
-    2,
-    '0'
-  )}`
+  const currentMonthKey = `${thisYear}-${String(selectedMonth).padStart(2, '0')}`
+
+  // 검색 상태 url 파싱
+  const readQuery = () => {
+    const p = new URLSearchParams(location.search)
+
+    // reset 파라미터가 있으면 무조건 홈 모드
+    if (p.has('reset')) {
+      return {
+        hasSearch: false,
+        filters: { location: '전체', date: '', category: '전체' } as SearchFilters,
+        page: 1,
+      }
+    }
+
+    const locationFilter = p.get('region') ?? '전체'
+    const date = p.get('date') ?? ''
+    const category = p.get('category') ?? '전체'
+    const page = Number(p.get('page') ?? '1')
+
+    const mode = p.get('mode')
+    const hasSearch =
+      mode === 'search' || p.has('region') || p.has('date') || p.has('category')
+
+    return {
+      hasSearch,
+      filters: { location: locationFilter, date, category } as SearchFilters,
+      page: Number.isFinite(page) && page >= 1 ? page : 1,
+    }
+  }
 
   // 공통 홈 데이터 로더
   const loadHome = async () => {
@@ -90,35 +118,11 @@ export default function HomePage() {
     }
   }
 
-  // 로고에서 "/?reset=..."로 들어온 경우: 검색 상태 초기화 + 맨 위로 스크롤 + 홈 데이터 최신화
-  useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    // 값이 '1'이든 '123123'이든 상관 없이 reset 파라미터만 존재하면 리셋
-    const shouldReset = params.has('reset')
-
-    if (!shouldReset) return
-
-    // 검색 관련 상태 초기화
-    setSearchResult(null)
-    setSearchFilters(null)
-
-    // 월 선택도 현재 달로 초기화
-    setSelectedMonth(thisMonth)
-    setDisplayMonthKey(initialMonthKey)
-
-    // 스크롤 맨 위로
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-
-    // 홈 데이터 다시 불러오기
-    loadHome()
-  }, [location.search])
-
   // 첫 진입: /api/popups/home (latest + popular + 이번 달 monthly)
   useEffect(() => {
     loadHome()
-  }, []) // 최초 1번만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 월 변경 시: 새 달 데이터를 백그라운드에서만 불러오기
   useEffect(() => {
@@ -126,7 +130,7 @@ export default function HomePage() {
     if (searchResult) return
     if (!homeBase) return
 
-    // 이미 캐시된 달이면 API 호출하지 말고 단순히 displayMonthKey만 현재 달로 바꿔준다.
+    // 이미 캐시된 달이면 API 호출하지 말고 단순히 displayMonthKey만 변경
     if (monthlyByMonth[currentMonthKey]) {
       setDisplayMonthKey(currentMonthKey)
       return
@@ -141,11 +145,9 @@ export default function HomePage() {
           [currentMonthKey]: res.monthly ?? [],
         }))
 
-        // 데이터 다 받았을 때만 화면에 보여주는 달을 교체
         setDisplayMonthKey(currentMonthKey)
       } catch (e: any) {
         console.error(e)
-        // 에러 나도 그냥 이전 달 데이터 계속 보여주면 됨
       }
     }
 
@@ -155,7 +157,7 @@ export default function HomePage() {
   // 화면에 실제로 뿌리는 monthly 는 항상 displayMonthKey 기준
   const monthly = monthlyByMonth[displayMonthKey] ?? []
 
-  // regionOptions: latest + popular + "현재 화면에 보이는 달"의 monthly 기준
+  // regionOptions: latest + popular + 현재 달 monthly 기준
   const regionOptions = useMemo(() => {
     if (!homeBase) return []
     const set = new Set<string>()
@@ -169,10 +171,11 @@ export default function HomePage() {
 
   const isInitialLoading = initialLoading && !homeBase && !searchResult
 
-  // 실제 검색 호출 로직을 함수로 분리 (초기 검색 + 페이지 이동 둘 다 여기 사용)
+  // 실제 검색 호출 로직
   const runSearch = async (filters: SearchFilters, page: number) => {
     try {
       setError(null)
+      setSearchLoading(true)
 
       const res = await searchPopups({
         region:
@@ -200,23 +203,56 @@ export default function HomePage() {
         pageSize: SEARCH_PAGE_SIZE,
         total: 0,
       })
+    } finally {
+      setSearchLoading(false)
     }
   }
 
-  // 검색 버튼 클릭 시
-  const handleSearch = async (next: SearchFilters) => {
-    // 현재 필터를 저장해두고, 항상 1페이지부터 시작
-    setSearchFilters(next)
-    await runSearch(next, 1)
+  // URL 바뀔 때마다: 검색 모드면 검색 실행 / 아니면 홈 모드
+  useEffect(() => {
+    const { hasSearch, filters, page } = readQuery()
+
+    // HeroSection 입력값 URL과 동기화
+    setUiFilters(filters)
+
+    if (!hasSearch) {
+      setSearchResult(null)
+      setError(null)
+
+      const p = new URLSearchParams(location.search)
+      if (p.has('reset') && typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+
+      if (!homeBase) loadHome()
+      return
+    }
+
+    runSearch(filters, page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search])
+
+  // 검색 버튼 클릭 시 -> URL 변경
+  const handleSearch = (next: SearchFilters) => {
+    const p = new URLSearchParams()
+
+    const region = next.location.trim()
+    if (region !== '' && region !== '전체') p.set('region', region)
+    if (next.date) p.set('date', next.date)
+    if (next.category !== '전체') p.set('category', next.category)
+
+    // “빈 값으로 검색 눌러도” 검색모드 진입시키기 위해 mode를 강제로 붙임
+    p.set('mode', 'search')
+
+    p.set('page', '1')
+    navigate(`/?${p.toString()}`)
   }
 
-  // 페이지 번호 클릭 시
-  const handleChangeSearchPage = async (nextPage: number) => {
-    if (!searchFilters) return // 필터 정보가 없으면 수행 X
-    // 동일 페이지 눌렀을 때는 무시
-    if (searchResult && searchResult.page === nextPage) return
-
-    await runSearch(searchFilters, nextPage)
+  // 페이지 번호 클릭 시 -> URL 변경
+  const handleChangeSearchPage = (nextPage: number) => {
+    const p = new URLSearchParams(location.search)
+    p.set('page', String(nextPage))
+    navigate(`/?${p.toString()}`)
   }
 
   const renderEmptySearch = () => (
@@ -234,47 +270,144 @@ export default function HomePage() {
     if (!total || total <= pageSize) return null
 
     const totalPages = Math.ceil(total / pageSize)
+    const current = page
 
-    // 일단은 전체를 다 보여주는 단순한 게시판 스타일
-    const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+    // 보여줄 “중간 페이지” 최대 개수 (1, 마지막 제외)
+    const MAX_MIDDLE = 6
+
+    const clamp = (n: number, min: number, max: number) =>
+      Math.max(min, Math.min(max, n))
+
+    // middle 범위 계산
+    let start = current - Math.floor(MAX_MIDDLE / 2)
+    let end = start + MAX_MIDDLE - 1
+
+    // middle은 2 ~ totalPages-1 사이만 가능
+    start = clamp(start, 2, Math.max(2, totalPages - 1))
+    end = clamp(end, 2, totalPages - 1)
+
+    // 길이 맞추기 (totalPages가 작을 때)
+    const middleCount = end - start + 1
+    if (middleCount < MAX_MIDDLE) {
+      end = clamp(end + (MAX_MIDDLE - middleCount), 2, totalPages - 1)
+      start = clamp(start - (MAX_MIDDLE - (end - start + 1)), 2, totalPages - 1)
+    }
+
+    const middlePages: number[] = []
+    for (let i = start; i <= end; i++) middlePages.push(i)
+
+    const showLeftDots = start > 2
+    const showRightDots = end < totalPages - 1
+
+    const goTo = (p: number) => {
+      if (p < 1 || p > totalPages) return
+      handleChangeSearchPage(p)
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    }
 
     return (
-      <div className="flex justify-center gap-2 py-6 text-sm">
-        {pages.map((p) => (
+      <div className="flex justify-center py-6">
+        <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+          {/* Prev */}
           <button
-            key={p}
-            onClick={() => handleChangeSearchPage(p)}
-            className={`min-w-[32px] rounded-md border px-2 py-1 ${
-              p === page
+            onClick={() => goTo(current - 1)}
+            disabled={current === 1}
+            className={`px-3 py-1 rounded-md border ${
+              current === 1
+                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            Prev
+          </button>
+
+          {/* 1 */}
+          <button
+            onClick={() => goTo(1)}
+            className={`min-w-[36px] px-3 py-1 rounded-md border ${
+              current === 1
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            {p}
+            1
           </button>
-        ))}
+
+          {/* left ... */}
+          {showLeftDots && <span className="px-2 text-slate-400 select-none">…</span>}
+
+          {/* middle */}
+          {middlePages.map((p) => (
+            <button
+              key={p}
+              onClick={() => goTo(p)}
+              className={`min-w-[36px] px-3 py-1 rounded-md border ${
+                p === current
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+
+          {/* right ... */}
+          {showRightDots && <span className="px-2 text-slate-400 select-none">…</span>}
+
+          {/* last */}
+          {totalPages > 1 && (
+            <button
+              onClick={() => goTo(totalPages)}
+              className={`min-w-[36px] px-3 py-1 rounded-md border ${
+                current === totalPages
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {totalPages}
+            </button>
+          )}
+
+          {/* Next */}
+          <button
+            onClick={() => goTo(current + 1)}
+            disabled={current === totalPages}
+            className={`px-3 py-1 rounded-md border ${
+              current === totalPages
+                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            Next
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="bg-bg">
-      <HeroSection onSearch={handleSearch} regionOptions={regionOptions} />
+      <HeroSection
+        value={uiFilters}
+        onChange={setUiFilters}
+        onSearch={handleSearch}
+        regionOptions={regionOptions}
+      />
 
-      <div className="mt-10 space-y-6">
+      <div className="mt-6 space-y-6">
         {isInitialLoading && (
           <p className="text-center text-sm text-textMuted">
             팝업 정보를 불러오는 중입니다...
           </p>
         )}
-        {error && (
-          <p className="text-center text-sm text-red-500">{error}</p>
-        )}
+
+        {error && <p className="text-center text-sm text-red-500">{error}</p>}
 
         {!isInitialLoading && !error && (
           <>
             {searchResult ? (
-              // 검색 결과 모드
               searchResult.items.length === 0 ? (
                 renderEmptySearch()
               ) : (
@@ -283,32 +416,35 @@ export default function HomePage() {
                     title="검색 결과"
                     items={searchResult.items}
                     variant="grid"
-                    // 서버 페이지네이션 기준에 맞춰 15개
                     pageSize={SEARCH_PAGE_SIZE}
+                    loading={searchLoading}
+                    skeletonCount={SEARCH_PAGE_SIZE}
+                    gridClassName="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5"
                   />
-                  {/* 게시판 스타일 페이지네이션 */}
                   {renderPagination()}
                 </>
               )
             ) : homeBase ? (
-              // 기본 홈 화면 모드
               <>
                 <GridSection
                   title="새로 들어온 팝업스토어"
                   items={homeBase.latest}
+                  loading={initialLoading}
+                  skeletonCount={6}
                 />
                 <GridSection
                   title="인기 있는 팝업스토어"
                   items={homeBase.popular}
+                  loading={initialLoading}
+                  skeletonCount={6}
                 />
                 <GridSection
                   title={`${selectedMonth}월 팝업스토어`}
                   items={monthly}
+                  loading={initialLoading}
+                  skeletonCount={6}
                   rightSlot={
-                    <MonthSelector
-                      selected={selectedMonth}
-                      onChange={setSelectedMonth}
-                    />
+                    <MonthSelector selected={selectedMonth} onChange={setSelectedMonth} />
                   }
                 />
               </>

@@ -22,7 +22,8 @@ export default function Header() {
         <button
           type="button"
           onClick={goHomeWithReset}
-          className="flex items-center gap-1 text-2xl md:text-3xl font-extrabold tracking-tight"
+          className="flex items-center gap-1 text-2xl md:text-3xl font-extrabold tracking-tight
+                    focus:outline-none focus-visible:outline-none"
         >
           <span className="text-slate-500">Pop</span>
           <span className="text-blue-500">Fit</span>

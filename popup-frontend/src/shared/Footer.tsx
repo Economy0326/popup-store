@@ -14,7 +14,7 @@ export default function Footer() {
           <p>
             문의:{' '}
             <a
-              href="mailto:popfitup1234@gmail.com"
+              href="mailto:wjdrudwo0575@naver.com"
               className="underline-offset-2 hover:underline text-text"
             >
               wjdrudwo0575@naver.com
