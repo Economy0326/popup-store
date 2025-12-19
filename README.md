@@ -285,18 +285,21 @@ await db.promise().query(
 - 지역 / 날짜 / 카테고리 입력 UI
 - URL 기반 검색 상태 유지
 ```
-const p = new URLSearchParams(location.search)
-const filters = {
-  location: p.get('region') ?? '전체',
-  date: p.get('date') ?? '',
-  category: p.get('category') ?? '전체',
-}
-const page = Number(p.get('page') ?? '1')
+const params = new URLSearchParams(location.search)
 
-navigate(
-  `/?region=${filters.location}&date=${filters.date}&category=${filters.category}&page=${page}&mode=search`
-)
+const filters = {
+  location: params.get('region') ?? '전체',
+  date: params.get('date') ?? '',
+  category: params.get('category') ?? '전체',
+}
+
+const page = Number(params.get('page') ?? '1')
+
+params.set('mode', 'search')
+params.set('page', '1')
+navigate(`/?${params.toString()}`)
 ```
+
 - 검색 결과 페이지네이션 지원
 
 ![Pagination](docs/screens/pagination.PNG)
