@@ -334,8 +334,10 @@ navigate(`/?${params.toString()}`)
 - 헤더 네비게이션은 데스크탑/모바일 UI를 분리해 사용성 최적화  
   (데스크탑 아이콘/버튼 + 모바일 햄버거 메뉴)
   
-### ✅ Mobile Preview
-![Responsive](docs/screens/responsive.PNG)
+### 📱 Mobile Preview
+<p align="center">
+  <img src="docs/screens/responsive.PNG" width="360" />
+</p>
 
 ---
 
