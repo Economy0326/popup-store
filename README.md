@@ -302,7 +302,7 @@ navigate(`/?${params.toString()}`)
 
 - 검색 결과 페이지네이션 지원
 
-![Pagination](docs/screens/pagination.PNG)
+![Pagination](docs/screens/pagination.png)
 > 페이지네이션은 현재 페이지 기준으로 일부 페이지만 노출하여 모바일에서도 UI가 깨지지 않도록 구현했습니다.
 
 ### 🧭 (2) 홈 화면 탐색 섹션
