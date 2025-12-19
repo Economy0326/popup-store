@@ -38,8 +38,8 @@
 ## 🖼️ 서비스 주요 화면
 
 ### 🏠 홈 / 검색
-- 지역 · 날짜 · 카테고리 기반 검색
 - 최신 / 인기 / 월별 팝업 탐색
+- 지역 · 날짜 · 카테고리 기반 검색
 
 ![Home](docs/screens/home.PNG)
 ![Search](docs/screens/search.PNG)
