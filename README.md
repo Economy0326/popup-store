@@ -284,7 +284,23 @@ await db.promise().query(
 ### 🏠 (1) 메인 화면(UI & 검색)
 - 지역 / 날짜 / 카테고리 입력 UI
 - URL 기반 검색 상태 유지
+```
+const p = new URLSearchParams(location.search)
+const filters = {
+  location: p.get('region') ?? '전체',
+  date: p.get('date') ?? '',
+  category: p.get('category') ?? '전체',
+}
+const page = Number(p.get('page') ?? '1')
+
+navigate(
+  `/?region=${filters.location}&date=${filters.date}&category=${filters.category}&page=${page}&mode=search`
+)
+```
 - 검색 결과 페이지네이션 지원
+
+![Pagination](docs/screens/pagination.PNG)
+> 페이지네이션은 현재 페이지 기준으로 일부 페이지만 노출하여 모바일에서도 UI가 깨지지 않도록 구현했습니다.
 
 ### 🧭 (2) 홈 화면 탐색 섹션
 - 새로 들어온 팝업
@@ -314,6 +330,9 @@ await db.promise().query(
   (`h-72 sm:h-80 md:h-96` 등)
 - 헤더 네비게이션은 데스크탑/모바일 UI를 분리해 사용성 최적화  
   (데스크탑 아이콘/버튼 + 모바일 햄버거 메뉴)
+  
+### ✅ Mobile Preview
+![Responsive](docs/screens/responsive.PNG)
 
 ---
 
