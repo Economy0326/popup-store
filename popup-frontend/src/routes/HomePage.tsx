@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import HeroSection, { type SearchFilters } from '../components/HeroSection'
 import GridSection from '../components/GridSection'
@@ -9,7 +9,6 @@ import { fetchHomeInitial, fetchHomeMonthly, searchPopups } from '../api/popups'
 // 검색 결과 페이지당 개수는 15개로 고정
 const SEARCH_PAGE_SIZE = 15
 
-// 검색 결과 + 페이지 정보까지 함께 들고 있을 형태
 type SearchResultState = {
   items: PopupItem[]
   page: number
@@ -26,46 +25,35 @@ export default function HomePage() {
   const thisMonth = now.getMonth() + 1
   const initialMonthKey = `${thisYear}-${String(thisMonth).padStart(2, '0')}`
 
-  // 유저가 선택한 달 (UI용)
   const [selectedMonth, setSelectedMonth] = useState(thisMonth)
-
-  // 검색 로딩 상태
   const [searchLoading, setSearchLoading] = useState(false)
 
-  // latest / popular 는 공통
   const [homeBase, setHomeBase] = useState<{
     latest: PopupItem[]
     popular: PopupItem[]
   } | null>(null)
 
-  // month → monthly 캐시
   const [monthlyByMonth, setMonthlyByMonth] = useState<Record<string, PopupItem[]>>({})
-
-  // 실제로 화면에 보여주는 month key
   const [displayMonthKey, setDisplayMonthKey] = useState<string>(initialMonthKey)
-
-  // 검색 결과 전체
   const [searchResult, setSearchResult] = useState<SearchResultState>(null)
 
-  // HeroSection UI 필터 (URL과 동기화)
   const [uiFilters, setUiFilters] = useState<SearchFilters>({
     location: '전체',
     date: '',
     category: '전체',
   })
 
-  // 초기 로딩 및 에러 상태
   const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // 현재 선택된 키 (데이터 요청용)
   const currentMonthKey = `${thisYear}-${String(selectedMonth).padStart(2, '0')}`
 
-  // 검색 상태 url 파싱
+  // 검색 페이지네이션 클릭으로 "이동"한 경우에만 스크롤하도록 플래그
+  const shouldScrollTopRef = useRef(false)
+
   const readQuery = () => {
     const p = new URLSearchParams(location.search)
 
-    // reset 파라미터가 있으면 무조건 홈 모드
     if (p.has('reset')) {
       return {
         hasSearch: false,
@@ -90,7 +78,6 @@ export default function HomePage() {
     }
   }
 
-  // 공통 홈 데이터 로더
   const loadHome = async () => {
     try {
       setInitialLoading(true)
@@ -108,7 +95,6 @@ export default function HomePage() {
         [initialMonthKey]: res.monthly ?? [],
       }))
 
-      // 보여주는 달도 현재 달로
       setDisplayMonthKey(initialMonthKey)
     } catch (e: any) {
       console.error(e)
@@ -118,19 +104,15 @@ export default function HomePage() {
     }
   }
 
-  // 첫 진입: /api/popups/home (latest + popular + 이번 달 monthly)
   useEffect(() => {
     loadHome()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 월 변경 시: 새 달 데이터를 백그라운드에서만 불러오기
   useEffect(() => {
-    // 검색 모드면 월 데이터는 건들지 않음
     if (searchResult) return
     if (!homeBase) return
 
-    // 이미 캐시된 달이면 API 호출하지 말고 단순히 displayMonthKey만 변경
     if (monthlyByMonth[currentMonthKey]) {
       setDisplayMonthKey(currentMonthKey)
       return
@@ -139,12 +121,10 @@ export default function HomePage() {
     const loadMonthly = async () => {
       try {
         const res = await fetchHomeMonthly({ month: currentMonthKey })
-
         setMonthlyByMonth((prev) => ({
           ...prev,
           [currentMonthKey]: res.monthly ?? [],
         }))
-
         setDisplayMonthKey(currentMonthKey)
       } catch (e: any) {
         console.error(e)
@@ -154,10 +134,8 @@ export default function HomePage() {
     loadMonthly()
   }, [currentMonthKey, searchResult, homeBase, monthlyByMonth])
 
-  // 화면에 실제로 뿌리는 monthly 는 항상 displayMonthKey 기준
   const monthly = monthlyByMonth[displayMonthKey] ?? []
 
-  // regionOptions: latest + popular + 현재 달 monthly 기준
   const regionOptions = useMemo(() => {
     if (!homeBase) return []
     const set = new Set<string>()
@@ -171,7 +149,6 @@ export default function HomePage() {
 
   const isInitialLoading = initialLoading && !homeBase && !searchResult
 
-  // 실제 검색 호출 로직
   const runSearch = async (filters: SearchFilters, page: number) => {
     try {
       setError(null)
@@ -208,11 +185,9 @@ export default function HomePage() {
     }
   }
 
-  // URL 바뀔 때마다: 검색 모드면 검색 실행 / 아니면 홈 모드
   useEffect(() => {
     const { hasSearch, filters, page } = readQuery()
 
-    // HeroSection 입력값 URL과 동기화
     setUiFilters(filters)
 
     if (!hasSearch) {
@@ -232,7 +207,21 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search])
 
-  // 검색 버튼 클릭 시 -> URL 변경
+  // 검색 결과 페이지가 바뀌고(데이터 반영된 뒤) 스크롤을 올림 -> “될 때/안될 때” 해결
+  useEffect(() => {
+    if (!searchResult) return
+    if (!shouldScrollTopRef.current) return
+    if (typeof window === 'undefined') return
+
+    shouldScrollTopRef.current = false
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      })
+    })
+  }, [searchResult?.page])
+
   const handleSearch = (next: SearchFilters) => {
     const p = new URLSearchParams()
 
@@ -241,17 +230,18 @@ export default function HomePage() {
     if (next.date) p.set('date', next.date)
     if (next.category !== '전체') p.set('category', next.category)
 
-    // “빈 값으로 검색 눌러도” 검색모드 진입시키기 위해 mode를 강제로 붙임
     p.set('mode', 'search')
-
     p.set('page', '1')
+
+    // 검색 버튼은 보통 상단이라 스크롤 플래그 굳이 필요 없지만 통일
+    shouldScrollTopRef.current = true
     navigate(`/?${p.toString()}`)
   }
 
-  // 페이지 번호 클릭 시 -> URL 변경
   const handleChangeSearchPage = (nextPage: number) => {
     const p = new URLSearchParams(location.search)
     p.set('page', String(nextPage))
+    shouldScrollTopRef.current = true
     navigate(`/?${p.toString()}`)
   }
 
@@ -263,7 +253,6 @@ export default function HomePage() {
     </div>
   )
 
-  // 페이지네이션 UI (검색 결과에만 사용)
   const renderPagination = () => {
     if (!searchResult) return null
     const { total, pageSize, page } = searchResult
@@ -271,22 +260,79 @@ export default function HomePage() {
 
     const totalPages = Math.ceil(total / pageSize)
     const current = page
+    if (totalPages <= 1) return null
 
-    // 보여줄 “중간 페이지” 최대 개수 (1, 마지막 제외)
+    const goTo = (p: number) => {
+      if (p < 1 || p > totalPages) return
+      if (p === current) return
+      handleChangeSearchPage(p)
+    }
+
+    // totalPages=2 중복 버그 방지
+    if (totalPages === 2) {
+      return (
+        <div className="w-full px-4 py-6">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+            <button
+              onClick={() => goTo(current - 1)}
+              disabled={current === 1}
+              className={`px-3 py-1 rounded-md border ${
+                current === 1
+                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              Prev
+            </button>
+
+            <button
+              onClick={() => goTo(1)}
+              className={`min-w-[36px] px-3 py-1 rounded-md border ${
+                current === 1
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              1
+            </button>
+
+            <button
+              onClick={() => goTo(2)}
+              className={`min-w-[36px] px-3 py-1 rounded-md border ${
+                current === 2
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              2
+            </button>
+
+            <button
+              onClick={() => goTo(current + 1)}
+              disabled={current === 2}
+              className={`px-3 py-1 rounded-md border ${
+                current === 2
+                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )
+    }
+
     const MAX_MIDDLE = 6
+    const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
 
-    const clamp = (n: number, min: number, max: number) =>
-      Math.max(min, Math.min(max, n))
-
-    // middle 범위 계산
     let start = current - Math.floor(MAX_MIDDLE / 2)
     let end = start + MAX_MIDDLE - 1
 
-    // middle은 2 ~ totalPages-1 사이만 가능
-    start = clamp(start, 2, Math.max(2, totalPages - 1))
+    // middle은 2 ~ totalPages-1
+    start = clamp(start, 2, totalPages - 1)
     end = clamp(end, 2, totalPages - 1)
 
-    // 길이 맞추기 (totalPages가 작을 때)
     const middleCount = end - start + 1
     if (middleCount < MAX_MIDDLE) {
       end = clamp(end + (MAX_MIDDLE - middleCount), 2, totalPages - 1)
@@ -299,18 +345,10 @@ export default function HomePage() {
     const showLeftDots = start > 2
     const showRightDots = end < totalPages - 1
 
-    const goTo = (p: number) => {
-      if (p < 1 || p > totalPages) return
-      handleChangeSearchPage(p)
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-      }
-    }
-
     return (
-      <div className="flex justify-center py-6">
-        <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
-          {/* Prev */}
+      <div className="w-full px-4 py-6">
+        {/* 모바일 가로 overflow 방지: w-full + wrap + 가운데정렬 */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-2 text-sm">
           <button
             onClick={() => goTo(current - 1)}
             disabled={current === 1}
@@ -323,41 +361,36 @@ export default function HomePage() {
             Prev
           </button>
 
-          {/* 1 */}
-          <button
-            onClick={() => goTo(1)}
-            className={`min-w-[36px] px-3 py-1 rounded-md border ${
-              current === 1
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            1
-          </button>
-
-          {/* left ... */}
-          {showLeftDots && <span className="px-2 text-slate-400 select-none">…</span>}
-
-          {/* middle */}
-          {middlePages.map((p) => (
+          <div className="flex w-full sm:w-auto flex-wrap items-center justify-center gap-2">
             <button
-              key={p}
-              onClick={() => goTo(p)}
+              onClick={() => goTo(1)}
               className={`min-w-[36px] px-3 py-1 rounded-md border ${
-                p === current
+                current === 1
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
               }`}
             >
-              {p}
+              1
             </button>
-          ))}
 
-          {/* right ... */}
-          {showRightDots && <span className="px-2 text-slate-400 select-none">…</span>}
+            {showLeftDots && <span className="px-2 text-slate-400 select-none">…</span>}
 
-          {/* last */}
-          {totalPages > 1 && (
+            {middlePages.map((p) => (
+              <button
+                key={p}
+                onClick={() => goTo(p)}
+                className={`min-w-[36px] px-3 py-1 rounded-md border ${
+                  p === current
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+
+            {showRightDots && <span className="px-2 text-slate-400 select-none">…</span>}
+
             <button
               onClick={() => goTo(totalPages)}
               className={`min-w-[36px] px-3 py-1 rounded-md border ${
@@ -368,9 +401,8 @@ export default function HomePage() {
             >
               {totalPages}
             </button>
-          )}
+          </div>
 
-          {/* Next */}
           <button
             onClick={() => goTo(current + 1)}
             disabled={current === totalPages}
@@ -388,7 +420,8 @@ export default function HomePage() {
   }
 
   return (
-    <div className="bg-bg">
+    // 혹시 모를 가로 overflow 안전장치
+    <div className="bg-bg overflow-x-hidden">
       <HeroSection
         value={uiFilters}
         onChange={setUiFilters}
@@ -438,15 +471,23 @@ export default function HomePage() {
                   loading={initialLoading}
                   skeletonCount={6}
                 />
-                <GridSection
-                  title={`${selectedMonth}월 팝업스토어`}
-                  items={monthly}
-                  loading={initialLoading}
-                  skeletonCount={6}
-                  rightSlot={
-                    <MonthSelector selected={selectedMonth} onChange={setSelectedMonth} />
-                  }
-                />
+
+                {/* MonthSelector 스크롤 타겟 */}
+                <div id="monthly-section">
+                  <GridSection
+                    title={`${selectedMonth}월 팝업스토어`}
+                    items={monthly}
+                    loading={initialLoading}
+                    skeletonCount={6}
+                    rightSlot={
+                      <MonthSelector
+                        selected={selectedMonth}
+                        onChange={setSelectedMonth}
+                        scrollTargetId="monthly-section"
+                      />
+                    }
+                  />
+                </div>
               </>
             ) : null}
           </>
