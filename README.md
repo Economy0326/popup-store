@@ -16,8 +16,7 @@
 
 | 서비스명 | URL | 상태 |
 | :--- | :--- | :--- |
-| **PopFitUp Web** | **[https://popfitup.store](https://popfitup.store)** | ![Status](https://img.shields.io/badge/Status-Online-success) |---
-
+| **PopFitUp Web** | **[https://popfitup.store](https://popfitup.store)** | ![Status](https://img.shields.io/badge/Status-Offline-critical) |
 ---
 
 ## 📌 Table of Contents
