@@ -288,10 +288,22 @@ await db.promise().query(
 
 ## 4️⃣ Frontend 주요 기능
 
-### 🏠 (1) 메인 화면(UI & 검색)
-- 지역 / 날짜 / 카테고리 입력 UI
-- URL 기반 검색 상태 유지
-```
+PopFitUp 프론트엔드는 팝업스토어 탐색, 상세 조회, 즐겨찾기, 제보, 운영자 관리 흐름을 제공합니다.
+
+단순히 데이터를 화면에 보여주는 것을 넘어,  
+검색 조건 유지, API 통신 구조 분리, 외부 지도 SDK 로딩, 로그인 상태 분기, 크롤링 데이터 예외 처리, 반응형 UI를 고려해 구현했습니다.
+
+---
+
+### 🏠 (1) 메인 화면 UI & 검색
+
+- 지역 / 날짜 / 카테고리 기반 검색 UI
+- URL query string 기반 검색 상태 유지
+- 검색 결과 페이지네이션 지원
+- 새로고침이나 URL 공유 이후에도 동일한 검색 조건 유지
+- 검색 화면과 일반 메인화면을 mode로 구분
+
+```ts
 const params = new URLSearchParams(location.search)
 
 const filters = {
@@ -304,47 +316,312 @@ const page = Number(params.get('page') ?? '1')
 
 params.set('mode', 'search')
 params.set('page', '1')
+
 navigate(`/?${params.toString()}`)
 ```
 
-- 검색 결과 페이지네이션 지원
+#### Pagination
 
-![Pagination](docs/screens/pagination.png)
+<p align="center">
+  <img src="docs/screens/pagination.png" width="720" />
+</p>
+
 > 페이지네이션은 현재 페이지 기준으로 일부 페이지만 노출하여 모바일에서도 UI가 깨지지 않도록 구현했습니다.
 
+---
+
 ### 🧭 (2) 홈 화면 탐색 섹션
+
+사용자가 팝업스토어를 빠르게 탐색할 수 있도록 홈 화면을 여러 섹션으로 나누어 구성했습니다.
+
 - 새로 들어온 팝업
 - 인기 있는 팝업
-- 월별 팝업 (월 선택 UI)
+- 월별 팝업
+- 월 선택 UI
 - 캐러셀 / 그리드 레이아웃 지원
 
+```ts
+const homeData = await fetchHomePopups()
+
+setLatestPopups(homeData.latest)
+setPopularPopups(homeData.popular)
+setMonthlyPopups(homeData.monthly)
+```
+
+### 구현 시 고려한 점
+
+- 초기 mock 데이터를 API 데이터 기준으로 교체
+- 홈 초기 진입 시 `initialLoading`, 검색 요청 시 `searchLoading`을 분리해 로딩 상태를 관리했습니다.
+- 서버 응답이 비어 있는 경우 `?? []`로 빈 배열을 기본값으로 사용해 렌더링 오류를 방지했습니다.
+- 검색 결과가 없는 경우 “조건에 맞는 팝업스토어가 없어요” 빈 상태 UI를 제공했습니다.
+- 카드 그리드와 캐러셀 UI 반응형 처리
+- 홈 화면의 최신/인기/월별 팝업은 프론트에서 직접 정렬하지 않고, 백엔드 SQL 조회 결과를 API로 받아 렌더링했습니다.
+- `latest`는 최신 업데이트순, `popular`는 즐겨찾기 수와 주간 조회수 기준, `monthly`는 선택 월과 운영 기간이 겹치는 팝업 기준으로 구성했습니다.
+
+---
+
 ### 📍 (3) 상세 페이지
+
+팝업스토어 상세 페이지에서는 기본 정보뿐 아니라,  
+현재 보고 있는 팝업과 관련된 다른 팝업을 함께 탐색할 수 있도록 구성했습니다.
+
 - 팝업 상세 정보 제공
 - 카테고리 / 지역 태그 시각화
 - 네이버 지도 기반 위치 표시
 - 비슷한 팝업 추천
+- 가까운 지역 팝업 추천
 
-### 📝 (4) 제보 / 운영자 UI
-- 팝업 제보 등록
+```ts
+const popup = await fetchPopupDetail(id)
+const similar = await fetchSimilarPopups(id)
+const nearby = await fetchNearbyPopups(id)
+```
+
+### 구현 의도
+
+사용자가 하나의 팝업스토어만 확인하고 탐색을 끝내지 않도록,  
+관련된 다른 팝업으로 자연스럽게 이동할 수 있는 흐름을 만들었습니다.
+
+### 구현 시 고려한 점
+
+- 상세 페이지의 비슷한 팝업은 같은 카테고리 기준, 가까운 팝업은 주소 기반 지역 기준으로 백엔드에서 조회한 결과를 렌더링했습니다.
+
+---
+
+### ⭐ (4) 즐겨찾기
+
+즐겨찾기는 로그인 사용자 전용 기능으로 구현했습니다.
+
+초기에는 localStorage 기반으로 관리했지만,  
+API 연동 이후에는 서버의 즐겨찾기 데이터를 기준으로 초기 상태를 불러오고,  
+즐겨찾기 추가/삭제 이후 UI를 갱신하도록 변경했습니다.
+
+- 로그인 사용자 기준 즐겨찾기 기능 제공
+- 팝업 카드 / 상세 페이지에서 즐겨찾기 상태 표시
+- 즐겨찾기 목록 조회
+- 즐겨찾기 페이지에서 지도와 리스트를 함께 제공
+- 비로그인 사용자는 로그인 안내 UI 노출
+
+```ts
+const toggleFavorite = async (popupId: number) => {
+  if (!user) {
+    openLoginRequired()
+    return
+  }
+
+  await toggleFavoriteApi(popupId)
+  await fetchFavorites()
+}
+```
+
+### 구현 시 고려한 점
+
+- 비로그인 사용자의 기능 접근 제어
+- 즐겨찾기 페이지에서 팝업 정보를 그대로 활용
+- 지도 마커와 리스트 UI의 데이터 기준 통일
+- 즐겨찾기 엔드포인트 변경에 따른 API 연결 수정
+- 즐겨찾기 추가/삭제 요청 이후 서버 기준의 최신 즐겨찾기 목록을 다시 조회하도록 구성
+
+
+---
+
+### 📝 (5) 제보 / 운영자 UI
+
+사용자는 서비스에 없는 팝업스토어를 직접 제보할 수 있고,  
+운영자는 관리자 페이지에서 제보를 확인하고 답변하거나 삭제할 수 있습니다.
+
+### 사용자 제보 기능
+
+- 팝업스토어 제보 등록
 - 내 제보 목록 확인
+- 제보 삭제
 - 운영자 답변 확인
 
-### 📱 (5) 반응형(Responsive) UI 고려
-- 메인 Hero 필터바를 모바일/태블릿/데스크탑에 맞게 그리드 레이아웃으로 구성  
-  (`grid-cols-1` → `sm:grid-cols-[...]`)
-- 카드 리스트/검색 결과/즐겨찾기 목록을 반응형 Grid로 구성  
-  (`grid-cols-2` → `sm:grid-cols-3` 등)
+### 운영자 관리 기능
+
+- 전체 제보 목록 조회
+- 제보별 답변 등록
+- 답변 완료 상태 표시
+- 제보 삭제
+
+```ts
+export async function createReport(payload: CreateReportPayload) {
+  return api<ReportItem>('/api/reports', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function answerReport(reportId: number, answer: string) {
+  return api<ReportItem>(`/api/admin/reports/${reportId}/answer`, {
+    method: 'POST',
+    body: JSON.stringify({ answer }),
+  })
+}
+```
+
+### 구현 의도
+
+사용자 입력 데이터가 운영자 검토를 거쳐 서비스에 반영될 수 있도록  
+사용자 화면과 운영자 화면을 분리해 구현했습니다.
+
+사용자 화면에서는 제보 등록과 답변 확인이 중요했고,  
+운영자 화면에서는 제보 상태 확인, 답변 등록, 삭제 같은 빠른 처리가 중요했습니다.
+
+또한 제보 개수를 최대 3개까지로 유지하여 악성 유저를 방지하는 역할을 했습니다.
+
+---
+
+### 🔌 (6) API 통신 구조 분리
+
+페이지 컴포넌트에서 직접 `fetch`를 호출하지 않고,  
+공통 API 클라이언트와 도메인별 API 모듈을 분리했습니다.
+
+```text
+api
+├─ auth.ts       # 로그인, 로그아웃, 내 정보 조회
+├─ client.ts     # 공통 API 클라이언트
+├─ favorites.ts # 즐겨찾기 조회, 추가, 삭제
+├─ popups.ts    # 팝업 목록, 검색, 상세, 추천
+└─ reports.ts   # 제보 등록, 내 제보, 관리자 제보 관리
+```
+
+```ts
+export async function api<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+    ...options,
+  })
+
+  const text = await res.text()
+
+  if (!res.ok) {
+    throw new Error(`API Error ${res.status}: ${text}`)
+  }
+
+  return text ? JSON.parse(text) : (null as T)
+}
+```
+
+### 구현 의도
+
+- API 요청 방식 일관화
+- 인증 쿠키 포함 요청 처리
+- 에러 처리 공통화
+- 페이지 컴포넌트와 서버 통신 로직 분리
+- API 서버 주소 환경변수 관리
+
+---
+
+### 🗺️ (7) 네이버 지도 SDK 로딩 처리
+
+네이버 지도 SDK는 외부 스크립트로 로드되기 때문에,  
+컴포넌트 렌더링 시점에 아직 `window.naver.maps`가 준비되지 않을 수 있습니다.
+
+이를 고려해 SDK 준비 여부를 확인한 뒤 지도를 초기화하고,  
+준비되지 않은 경우 일정 시간 후 다시 확인하도록 처리했습니다.
+
+```ts
+if (!window.naver || !window.naver.maps) {
+  retryTimerRef.current = window.setTimeout(initMap, 100)
+  return
+}
+
+const position = new naver.maps.LatLng(lat, lon)
+
+if (!mapInstanceRef.current) {
+  const map = new naver.maps.Map(mapRef.current!, {
+    center: position,
+    zoom: 16,
+  })
+
+  mapInstanceRef.current = map
+
+  markerRef.current = new naver.maps.Marker({
+    position,
+    map,
+  })
+} else {
+  const map = mapInstanceRef.current
+
+  map.setCenter(position)
+  markerRef.current?.setPosition(position)
+}
+```
+
+### 구현 시 고려한 점
+
+- SDK 로딩 전 컴포넌트 렌더링 대응
+- 지도 인스턴스 중복 생성 방지
+- 좌표 변경(팝업스토어 변경) 시 기존 지도 재사용
+- 마커 위치 업데이트
+- 컴포넌트 unmount 시 timer 및 marker 정리
+
+---
+
+### 🧩 (8) 크롤링 데이터 예외 처리
+
+PopFitUp은 크롤링 기반 데이터를 사용하기 때문에  
+모든 데이터가 항상 완전한 형태로 들어온다고 가정할 수 없었습니다.
+
+따라서 프론트엔드에서 다음과 같은 예외 상황을 고려했습니다.
+
+| 데이터 이슈 | UI 처리 |
+| --- | --- |
+| 좌표 없음 | 지도에는 표시하지 않고 카드 정보만 표시 |
+| 이미지 없음 | placeholder 이미지 표시 |
+| 카테고리 없음 | 기타 태그 표시 |
+| 종료된 팝업 | 목록에서 제외하거나 별도 분리 가능 |
+| 긴 설명 | 상세 페이지에서 가독성 있게 렌더링 |
+| 비슷한 데이터 중복 | 추천 영역에서 현재 팝업 제외 |
+
+---
+
+### 📱 (9) 반응형 Responsive UI
+
+모바일, 태블릿, 데스크탑 환경에서 주요 화면이 자연스럽게 보이도록 반응형 레이아웃을 적용했습니다.
+
+- 메인 Hero 필터바를 모바일 / 태블릿 / 데스크탑에 맞게 그리드 레이아웃으로 구성  
+  `grid-cols-1` → `sm:grid-cols-[...]`
+
+- 카드 리스트 / 검색 결과 / 즐겨찾기 목록을 반응형 Grid로 구성  
+  `grid-cols-2` → `sm:grid-cols-3`
+
 - 홈 섹션 캐러셀은 화면 너비에 따라 카드 폭 및 화살표 노출을 조절  
-  (overflow-x + ResizeObserver로 scrollWidth 기준)
-- 지도 영역은 모바일/데스크탑에서 높이를 다르게 적용하여 가독성 확보  
-  (`h-72 sm:h-80 md:h-96` 등)
-- 헤더 네비게이션은 데스크탑/모바일 UI를 분리해 사용성 최적화  
-  (데스크탑 아이콘/버튼 + 모바일 햄버거 메뉴)
-  
-### 📱 Mobile Preview
+  `overflow-x` + `ResizeObserver` 기반 scrollWidth 확인
+
+- 지도 영역은 모바일 / 데스크탑에서 높이를 다르게 적용하여 가독성 확보  
+  `h-72 sm:h-80 md:h-96`
+
+- 헤더 네비게이션은 데스크탑 / 모바일 UI를 분리해 사용성 최적화  
+  데스크탑 아이콘/버튼 + 모바일 햄버거 메뉴
+
+#### Mobile Preview
+
 <p align="center">
   <img src="docs/screens/responsive.PNG" width="360" />
 </p>
+
+---
+
+### 📁 Frontend Structure
+
+```text
+popup-frontend/src
+├─ api          # API 요청 함수
+├─ components   # 공통 UI 컴포넌트
+├─ hooks        # 커스텀 훅
+├─ routes       # 페이지 컴포넌트
+├─ shared       # 공통 레이아웃/요소
+└─ types        # API 응답 타입
+```
 
 ---
 
