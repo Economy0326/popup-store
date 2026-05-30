@@ -1,73 +1,113 @@
-# React + TypeScript + Vite
+# PopFitUp Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+네이버 지도 기반 팝업스토어 탐색 서비스 **PopFitUp**의 프론트엔드입니다.
 
-Currently, two official plugins are available:
+지역, 날짜, 카테고리, 키워드 기반 검색과 팝업 상세 조회, 즐겨찾기, 제보/운영자 관리 화면을 제공합니다.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+| 구분 | 기술 |
+| --- | --- |
+| Language | TypeScript |
+| Framework | React |
+| Build Tool | Vite |
+| Routing | React Router |
+| Styling | Tailwind CSS |
+| Map | Naver Maps JavaScript SDK |
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 주요 기능
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- 팝업스토어 목록 / 상세 조회
+- 지역, 날짜, 카테고리, 키워드 기반 검색
+- URL query string 기반 검색 상태 유지
+- 최신 / 인기 / 월별 팝업스토어 섹션
+- 네이버 지도 기반 위치 표시
+- 로그인 사용자 즐겨찾기
+- 팝업스토어 제보 등록 및 내 제보 관리
+- 운영자 제보 답변 / 삭제
+- 반응형 UI
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Folder Structure
+
+```text
+src
+├─ api          # 서버 API 요청 함수
+├─ components   # 공통 UI 컴포넌트
+├─ hooks        # 커스텀 훅
+├─ routes       # 페이지 컴포넌트
+├─ shared       # 공통 레이아웃/요소
+└─ types        # API 응답 타입
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## API Structure
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+페이지 컴포넌트에서 직접 `fetch`를 호출하지 않고, 공통 API 클라이언트와 도메인별 API 모듈을 분리했습니다.
+
+```text
+api
+├─ auth.ts       # 로그인, 로그아웃, 내 정보 조회
+├─ client.ts     # 공통 API 클라이언트
+├─ favorites.ts # 즐겨찾기 조회, 추가, 삭제
+├─ popups.ts    # 팝업 목록, 검색, 상세, 추천
+└─ reports.ts   # 제보 등록, 내 제보, 관리자 제보 관리
+```
+
+---
+
+## 주요 페이지
+
+| 페이지 | 설명 |
+| --- | --- |
+| `/` | 홈, 검색 결과, 최신/인기/월별 팝업 |
+| `/popups/:id` | 팝업스토어 상세 페이지 |
+| `/favorites` | 즐겨찾기 목록 및 지도 |
+| `/register` | 팝업스토어 제보 등록 |
+| `/my-reports` | 내 제보 목록 |
+| `/admin/reports` | 운영자 제보 관리 페이지 |
+
+---
+
+## 실행 방법
+
+```bash
+npm install
+npm run dev
+```
+
+---
+
+## 환경변수
+
+```env
+VITE_API_URL=https://api.popfitup.com
+```
+
+로컬 개발 환경에서는 다음과 같이 설정할 수 있습니다.
+
+```env
+VITE_API_URL=http://localhost:8080
+```
+
+---
+
+## Build
+
+```bash
+npm run build
+```
+
+---
+
+## Preview
+
+```bash
+npm run preview
 ```
